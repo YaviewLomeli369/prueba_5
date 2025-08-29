@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: p_5_app
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - PROJECT_NAME=p_5
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_NAME=db_p_5
+      - DB_USER=yaviewlomeli
+      - DB_PASSWORD=Losy990209bn7*
+      - SITE_NAME=p_5
+      - STORAGE_TYPE=database
+      - DATABASE_URL=postgresql://yaviewlomeli:Losy990209bn7*@host.docker.internal:5432/db_p_5
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - p_5_network
+
+networks:
+  p_5_network:
+    driver: bridge
