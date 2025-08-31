@@ -89,7 +89,7 @@ export async function initializeSiteConfig() {
         instagram: "",
         linkedin: "",
         youtube: "",
-        whatsapp: ""
+        whatsapp: "525512345678"
       },
       business: {
         name: "Mi Empresa",

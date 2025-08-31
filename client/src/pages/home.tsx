@@ -60,7 +60,7 @@ const plans = [
 
 
 const PlanCard = ({ plan }: { plan: typeof plans[0] }) => {
-  const WHATSAPP_NUMBER = "525525114175"; // tu número
+  const WHATSAPP_NUMBER = "525512345678"; // tu número
   const message = encodeURIComponent(
     `Hola, estoy interesado en el plan "${plan.name}" (${plan.price}). Me gustaría recibir más información y detalles para poder tomar una decisión. ¡Gracias!`
   );
@@ -207,7 +207,7 @@ function Home() {
         <section
           className="relative py-20 text-white"
           style={{
-            backgroundImage: `url("https://plus.unsplash.com/premium_vector-1697729495822-c971c4a69f03?q=80&w=881&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")`,
+            backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
@@ -241,20 +241,7 @@ function Home() {
         </section>
       </AnimatedSection>
 
-      {/* Plans Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-gray-100 overflow-x-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center mb-6 text-gray-800">Planes diseñados para tu negocio</h2>
-          <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">
-            Elige el plan que mejor se ajuste a tus objetivos. Todos incluyen soporte y actualizaciones básicas.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
-            {plans.map((plan, index) => (
-              <PlanCard key={index} plan={plan} />
-            ))}
-          </div>
-        </div>
-      </section>
+      
 
 
       

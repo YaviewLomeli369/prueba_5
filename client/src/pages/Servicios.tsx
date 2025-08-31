@@ -72,10 +72,9 @@ const plans = [
 ];
 
 const PlanCard = ({ plan }: { plan: typeof plans[0] }) => {
-  const WHATSAPP_NUMBER = "525525114175";
+  const WHATSAPP_NUMBER = "525512345678";
   const message = encodeURIComponent(
-    `Hola, buen día 👋. Estoy interesado en el plan "${plan.name}" (${plan.price}) y me gustaría conocer más detalles sobre lo que incluye y cómo puedo contratarlo. 
-Muchas gracias.`
+    `Hola, me interesa más información sobre sus servicios.`
   );
 
   const whatsappLink = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}`;
@@ -157,7 +156,7 @@ function Servicios() {
         <section
           className="relative py-20 text-white text-center"
           style={{
-            backgroundImage: `url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1600&q=80&auto=format&fit=crop")`,
+            backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")`,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}

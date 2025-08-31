@@ -6,7 +6,7 @@ export default function WhatsAppWidget() {
   
   // ✅ Solo cambiar aquí el número y el mensaje 
   // EDTX CAMBIO WHATSAPP Y MENSAJE
-  const WHATSAPP_NUMBER = "5215525114175"; // formato internacional sin "+"
+  const WHATSAPP_NUMBER = "525512345678"; // formato internacional sin "+"
   const DEFAULT_MESSAGE = (
       `Hola 👋, estoy interesado en conocer más sobre sus servicios de desarrollo de sitios web. 
     Me gustaría recibir información sobre planes, precios y cómo podemos comenzar. ¡Gracias!`
