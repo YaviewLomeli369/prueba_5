@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -6,7 +6,6 @@ import { SEOHead } from "@/components/seo-head";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +24,12 @@ export default function Reservations() {
     queryKey: ["/api/config"]
   });
 
-  const configData = config?.config as any;
-  const appearance = configData?.appearance || {};
+  const { appearance } = useMemo(() => {
+    const configData = config?.config as any;
+    return {
+      appearance: configData?.appearance || {},
+    };
+  }, [config]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -99,7 +102,7 @@ export default function Reservations() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email || !formData.date || !formData.timeSlot) {
       toast({
         variant: "destructive",
@@ -137,17 +140,20 @@ export default function Reservations() {
   };
 
   return (
-    <div className="min-h-screen bg-background" style={{ 
-      backgroundColor: appearance.backgroundColor || 'inherit',
-      color: appearance.textColor || 'inherit',
-      fontFamily: appearance.fontFamily || 'inherit'
-    }}>
+    <div 
+      className="min-h-screen bg-background"
+      style={{
+        backgroundColor: appearance.backgroundColor || "inherit",
+        color: appearance.textColor || "inherit",
+        fontFamily: appearance.fontFamily || "inherit",
+      }}
+    >
       <SEOHead 
         title={`Reservas - ${appearance.brandName || "Sistema Modular"}`}
         description="Haga su reserva con nosotros de manera fácil y rápida"
       />
       <Navbar />
-      
+
       {/* Hero Section */}
       <AnimatedSection>
         <section className="bg-primary text-white py-16"

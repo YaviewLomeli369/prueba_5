@@ -403,11 +403,30 @@ function AdminStoreContent() {
 
   // Handle URL hash for direct navigation to tabs
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash) {
-      setActiveTab(hash.substring(1));
+    const hash = window.location.hash.substring(1);
+    if (hash && ['products', 'orders', 'customers', 'categories'].includes(hash)) {
+      setActiveTab(hash);
     }
   }, []);
+
+  // Listen for hash changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      if (hash && ['products', 'orders', 'customers', 'categories'].includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Update URL hash when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.history.pushState(null, '', `#${value}`);
+  };
 
   const defaultTab = window.location.hash === '#categories' ? 'categories' : 'products';
 
@@ -484,7 +503,7 @@ function AdminStoreContent() {
         </div>
       )}
 
-      <Tabs defaultValue={defaultTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="orders">Pedidos</TabsTrigger>

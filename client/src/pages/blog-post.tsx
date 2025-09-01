@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute } from "wouter";
@@ -26,7 +26,7 @@ export default function BlogPost() {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   const { data: config } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
     queryFn: () => apiRequest("/api/config", { method: "GET" }),
@@ -37,6 +37,13 @@ export default function BlogPost() {
     queryFn: () => apiRequest(`/api/blog/slug/${params?.slug}`, { method: "GET" }),
     enabled: !!params?.slug,
   });
+
+  const { appearance } = useMemo(() => {
+    const configData = config?.config as any;
+    return {
+      appearance: configData?.appearance || {},
+    };
+  }, [config]);
 
   // Increment views mutation
   const incrementViewsMutation = useMutation({
@@ -50,9 +57,6 @@ export default function BlogPost() {
       queryClient.invalidateQueries({ queryKey: ["/api/blog"] });
     },
   });
-
-  const configData = config?.config as any;
-  const appearance = configData?.appearance || {};
 
   // Share functionality
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -89,7 +93,7 @@ export default function BlogPost() {
   };
 
   // Increment view count when component mounts
-  React.useEffect(() => {
+  useEffect(() => {
     if (post?.id) {
       incrementViewsMutation.mutate(post.id);
     }
@@ -136,17 +140,20 @@ export default function BlogPost() {
   }
 
   return (
-    <div className="min-h-screen bg-background" style={{ 
-      backgroundColor: appearance.backgroundColor || 'inherit',
-      color: appearance.textColor || 'inherit',
-      fontFamily: appearance.fontFamily || 'inherit'
-    }}>
+    <div 
+      className="min-h-screen bg-background"
+      style={{
+        backgroundColor: appearance.backgroundColor || "inherit",
+        color: appearance.textColor || "inherit",
+        fontFamily: appearance.fontFamily || "inherit",
+      }}
+    >
       <SEOHead 
         title={`${post.title} - ${appearance.brandName || "Sistema Modular"}`}
         description={post.excerpt || "Artículo del blog"}
       />
       <Navbar />
-      
+
       {/* Article Header */}
       <section className="bg-primary text-white py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -161,7 +168,7 @@ export default function BlogPost() {
               </Button>
             </Link>
           </div>
-          
+
           <div className="flex flex-wrap gap-2 mb-4">
             {post.tags?.map((tag, index) => (
               <Badge key={`${post.id}-${tag}-${index}`} variant="secondary" className="bg-white/20 text-white">
@@ -169,11 +176,11 @@ export default function BlogPost() {
               </Badge>
             ))}
           </div>
-          
+
           <h1 className="text-4xl md:text-5xl font-bold mb-6" style={{ fontFamily: appearance.fontFamily || 'inherit' }}>
             {post.title}
           </h1>
-          
+
           <div className="flex items-center justify-between text-blue-100">
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-2">
@@ -247,7 +254,7 @@ export default function BlogPost() {
                   />
                 </div>
               )}
-              
+
               {post.excerpt && (
                 <div className="bg-gray-50 p-6 rounded-lg mb-8">
                   <p className="text-lg text-gray-700 italic">
@@ -255,7 +262,7 @@ export default function BlogPost() {
                   </p>
                 </div>
               )}
-              
+
               <div className="prose prose-lg max-w-none break-word">
                 <div 
                   className="text-base leading-relaxed break-word"

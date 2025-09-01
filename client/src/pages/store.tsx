@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Navbar } from "@/components/layout/navbar";
@@ -35,6 +35,26 @@ export default function Store() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+
+  // Reset states when component unmounts (navigation away)
+  useEffect(() => {
+    return () => {
+      setSelectedProduct(null);
+      setIsCartOpen(false);
+      setProductQuantity(1);
+    };
+  }, []);
+
+  // Reset search and filters when products change
+  useEffect(() => {
+    if (products && products.length > 0) {
+      // Ensure we have valid categories before resetting
+      const validCategories = categories?.map(cat => cat.id) || [];
+      if (!validCategories.includes(selectedCategory) && selectedCategory !== "all") {
+        setSelectedCategory("all");
+      }
+    }
+  }, [products, categories]);
 
   // --- Consultas ---
   const { data: config } = useQuery<SiteConfig>({
@@ -177,8 +197,19 @@ export default function Store() {
     </div>
   );
 
+  // Get appearance configuration
+  const configData = config?.config as any;
+  const appearance = configData?.appearance || {};
+
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen bg-background"
+      style={{
+        backgroundColor: appearance.backgroundColor || "inherit",
+        color: appearance.textColor || "inherit",
+        fontFamily: appearance.fontFamily || "inherit",
+      }}
+    >
       <SEOHead title="Tienda - Productos en línea" description="Descubre nuestra colección de productos. Envío gratis en pedidos superiores a $500." />
       <Navbar />
 
@@ -187,8 +218,24 @@ export default function Store() {
         <AnimatedSection>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Tienda</h1>
-              <p className="text-xl text-gray-600">Descubre nuestra colección de productos</p>
+              <h1 
+                className="text-4xl font-bold mb-2"
+                style={{ 
+                  color: appearance.textColor || "#111111",
+                  fontFamily: appearance.fontFamily || "inherit"
+                }}
+              >
+                Tienda
+              </h1>
+              <p 
+                className="text-xl"
+                style={{ 
+                  color: appearance.textColor || "#666666",
+                  fontFamily: appearance.fontFamily || "inherit"
+                }}
+              >
+                Descubre nuestra colección de productos
+              </p>
             </div>
 
             {/* Botón Carrito */}
@@ -329,7 +376,15 @@ export default function Store() {
         </AnimatedSection>
 
         {/* Modal Producto */}
-        <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
+        <Dialog 
+          open={!!selectedProduct} 
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedProduct(null);
+              setProductQuantity(1);
+            }
+          }}
+        >
           <DialogContent className="max-w-3xl">
             {selectedProduct && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

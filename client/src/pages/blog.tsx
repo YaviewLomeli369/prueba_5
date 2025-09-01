@@ -15,7 +15,7 @@ import AnimatedSection from "@/components/AnimatedSection";
 export default function Blog() {
   const { user } = useAuth();
   const isSuperuser = user?.role === 'superuser';
-  
+
   const { data: config } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
     queryFn: () => apiRequest("/api/config", { method: "GET" }),
@@ -51,17 +51,17 @@ export default function Blog() {
   }
 
   return (
-    <div className="min-h-screen bg-background" style={{ 
+    <div className="min-h-screen bg-background" style={{
       backgroundColor: appearance.backgroundColor || 'inherit',
       color: appearance.textColor || 'inherit',
       fontFamily: appearance.fontFamily || 'inherit'
     }}>
       <SEOHead 
         title={`Blog - ${appearance.brandName || "Sistema Modular"}`}
-        description="Artículos y noticias del blog"
+        description="Artículos, noticias y actualizaciones"
       />
       <Navbar />
-      
+
       {/* Hero Section */}
       <AnimatedSection>
         <section

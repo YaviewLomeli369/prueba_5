@@ -268,6 +268,7 @@ function Home() {
                   placeholder="Nombre de la sección..."
                   className="text-3xl font-bold mb-4 block"
                   tag="h2"
+                  style={{ color: appearance.textColor, fontFamily: appearance.fontFamily }}
                 />
                 <InlineTextarea
                   value={section.content || ""}
@@ -276,6 +277,7 @@ function Home() {
                   }}
                   placeholder="Contenido de la sección..."
                   className="text-lg mb-6 opacity-80"
+                  style={{ color: appearance.textColor, fontFamily: appearance.fontFamily }}
                   rows={4}
                 />
               </>
