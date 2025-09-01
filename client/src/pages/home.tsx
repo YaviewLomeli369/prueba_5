@@ -227,12 +227,10 @@ function Home() {
                 <Link href="/contact">Contáctanos</Link>
               </Button>
               {modules.tienda?.activo && (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-white border-white hover:bg-white hover:text-primary transition-all duration-300 shadow-md"
-                  asChild
-                >
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white hover:text-black border border-white"
+              >
                   <Link href="/store">Ver Tienda</Link>
                 </Button>
               )}
