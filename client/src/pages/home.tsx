@@ -62,7 +62,7 @@ const plans = [
 const PlanCard = ({ plan }: { plan: typeof plans[0] }) => {
   const WHATSAPP_NUMBER = "525512345678"; // tu número
   const message = encodeURIComponent(
-    `Hola, estoy interesado en el plan "${plan.name}" (${plan.price}). Me gustaría recibir más información y detalles para poder tomar una decisión. ¡Gracias!`
+    `Hola, me interesa más información sobre sus servicios.`
   );
   const whatsappLink = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}&app_absent=0`;
 

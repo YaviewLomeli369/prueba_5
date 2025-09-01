@@ -13,18 +13,18 @@ import AnimatedSection from "@/components/AnimatedSection";
 
 const services = [
   {
-    title: "Diseño Web Moderno",
-    description: "Creamos sitios atractivos, rápidos y optimizados para móviles.",
+    title: "Desarrollo Web a Medida",
+    description: "Creamos sitios web modernos y escalables.",
     icon: <Rocket className="h-8 w-8 text-blue-600" />,
   },
   {
-    title: "SEO y Marketing",
-    description: "Mejoramos tu posicionamiento en buscadores y aumentamos tu visibilidad.",
+    title: "Marketing Digital",
+    description: "Estrategias para atraer clientes y crecer en línea.",
     icon: <Target className="h-8 w-8 text-green-600" />,
   },
   {
-    title: "Soporte Personalizado",
-    description: "Acompañamiento cercano y soporte técnico en todo momento.",
+    title: "Consultoría Tecnológica",
+    description: "Acompañamos a tu empresa en su transformación digital.",
     icon: <Users className="h-8 w-8 text-purple-600" />,
   },
 ];

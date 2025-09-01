@@ -42,8 +42,7 @@ function Conocenos() {
                   <h3 className="text-2xl font-bold mb-3 text-gray-800">Nuestra Misión</h3>
                   <div className="w-12 h-1 bg-blue-600 mx-auto mb-4 rounded-full" />
                   <p className="text-gray-600 leading-relaxed">
-                    Ayudar a las empresas a digitalizarse de manera rápida y eficiente, 
-                    ofreciendo soluciones accesibles y escalables.
+                    Brindar soluciones digitales accesibles y de alto impacto.
                   </p>
                 </CardContent>
               </Card>
@@ -58,8 +57,7 @@ function Conocenos() {
                   <h3 className="text-2xl font-bold mb-3 text-gray-800">Nuestra Visión</h3>
                   <div className="w-12 h-1 bg-indigo-600 mx-auto mb-4 rounded-full" />
                   <p className="text-gray-600 leading-relaxed">
-                    Ser el aliado tecnológico más confiable para pequeñas y medianas empresas,
-                    impulsando su éxito en el mundo digital.
+                    Ser líderes en innovación tecnológica para PYMES en LATAM.
                   </p>
                 </CardContent>
               </Card>
@@ -74,7 +72,7 @@ function Conocenos() {
                   <h3 className="text-2xl font-bold mb-3 text-gray-800">Nuestros Valores</h3>
                   <div className="w-12 h-1 bg-purple-600 mx-auto mb-4 rounded-full" />
                   <p className="text-gray-600 leading-relaxed">
-                    Innovación, transparencia, compromiso y excelencia en cada proyecto.
+                    Innovación, compromiso, transparencia.
                   </p>
                 </CardContent>
               </Card>
@@ -112,23 +110,23 @@ function Conocenos() {
                         </div>
                       </div>
                     </div>
-                    <h4 className="font-semibold text-xl text-gray-800">Nombre Apellido</h4>
-                    <p className="text-sm text-gray-500 mb-4">Cargo / Rol</p>
+                    <h4 className="font-semibold text-xl text-gray-800">Juan Pérez</h4>
+                    <p className="text-sm text-gray-500 mb-4">CEO</p>
                     <div className="italic text-gray-600 mb-4 flex items-center justify-center gap-2">
                       <Quote className="h-4 w-4 text-blue-500" />
-                      <span>"Mi compromiso es dar lo mejor en cada proyecto."</span>
+                      <span>La innovación es nuestro motor."</span>
                     </div>
                     <div className="space-y-2 text-sm text-gray-600">
                       <div className="flex items-center justify-center gap-2">
                         <Phone className="h-4 w-4 text-green-600" />
                         <a href="tel:+525511223344" className="hover:underline">
-                          +52 55 1122 3344
+                          +52 55 9999 8888
                         </a>
                       </div>
                       <div className="flex items-center justify-center gap-2">
                         <Mail className="h-4 w-4 text-blue-600" />
                         <a href="mailto:correo@empresa.com" className="hover:underline">
-                          correo@empresa.com
+                          juan@novadigital.com
                         </a>
                       </div>
                     </div>
@@ -155,23 +153,21 @@ function Conocenos() {
                         </div>
                       </div>
                     </div>
-                    <h4 className="font-semibold text-xl text-gray-800">Nombre Apellido</h4>
-                    <p className="text-sm text-gray-500 mb-4">Cargo / Rol</p>
+                    <h4 className="font-semibold text-xl text-gray-800">Ana Torres</h4>
+                    <p className="text-sm text-gray-500 mb-4">Directora de Marketing</p>
                     <div className="italic text-gray-600 mb-4 flex items-center justify-center gap-2">
                       <Quote className="h-4 w-4 text-blue-500" />
-                      <span>"Mi compromiso es dar lo mejor en cada proyecto."</span>
+                      <span>"Las ideas valen cuando se ejecutan."</span>
                     </div>
                     <div className="space-y-2 text-sm text-gray-600">
                       <div className="flex items-center justify-center gap-2">
                         <Phone className="h-4 w-4 text-green-600" />
-                        <a href="tel:+525511223344" className="hover:underline">
-                          +52 55 1122 3344
-                        </a>
+                       
                       </div>
                       <div className="flex items-center justify-center gap-2">
                         <Mail className="h-4 w-4 text-blue-600" />
                         <a href="mailto:correo@empresa.com" className="hover:underline">
-                          correo@empresa.com
+                          ana@novadigital.com
                         </a>
                       </div>
                     </div>
