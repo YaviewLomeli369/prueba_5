@@ -160,15 +160,17 @@ export function BlogPostCardEditable({ post, onEdit, onDelete }: BlogPostCardEdi
             </div>
             <div className="flex items-center gap-1">
               <User className="h-3 w-3" />
-              <span>{post.authorId || 'Admin'}</span>
+              <span>{post.authorName  || 'Admin'}</span>
             </div>
           </div>
           
           <Button size="sm" variant="outline" asChild>
-            <Link href={`/blog/${post.id}`}>
-              <Eye className="h-3 w-3 mr-1" />
-              Ver
-            </Link>
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/blog/${post.slug}`}>
+                <Eye className="h-3 w-3 mr-1" />
+                Ver
+              </Link>
+            </Button>
           </Button>
         </div>
       </CardContent>

@@ -150,7 +150,14 @@ export default function Reservations() {
       
       {/* Hero Section */}
       <AnimatedSection>
-        <section className="bg-primary text-white py-16">
+        <section className="bg-primary text-white py-16"
+          style={{
+            backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Calendar className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ fontFamily: appearance.fontFamily || 'inherit' }}>

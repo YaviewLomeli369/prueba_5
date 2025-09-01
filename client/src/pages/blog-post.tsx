@@ -120,7 +120,10 @@ export default function BlogPost() {
               El artículo que buscas no existe o ha sido eliminado.
             </p>
             <Link href="/blog">
-              <Button>
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white hover:text-black border border-white"
+              >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Volver al Blog
               </Button>
@@ -149,7 +152,10 @@ export default function BlogPost() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
             <Link href="/blog">
-              <Button variant="outline" className="text-white border-white hover:bg-white hover:text-primary">
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white hover:text-black border border-white"
+              >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Volver al Blog
               </Button>
@@ -187,7 +193,10 @@ export default function BlogPost() {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="text-white border-white hover:bg-white hover:text-primary">
+                  <Button
+                    variant="ghost"
+                    className="text-white hover:bg-white hover:text-black border border-white"
+                  >
                   <Share className="w-4 h-4 mr-2" />
                   Compartir
                 </Button>

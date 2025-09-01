@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState , useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -61,6 +61,19 @@ export default function Testimonials() {
     },
   });
 
+  const { data: config, isLoading: configLoading } = useQuery<SiteConfig>({
+    queryKey: ["/api/config"],
+  });
+
+  const { appearance, frontpage, modules } = useMemo(() => {
+    const configData = config?.config as any;
+    return {
+      appearance: configData?.appearance || {},
+      frontpage: configData?.frontpage || {},
+      modules: configData?.frontpage?.modulos || {},
+    };
+  }, [config]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createTestimonialMutation.mutate(formData);
@@ -75,20 +88,39 @@ export default function Testimonials() {
       <Navbar />
       
       <AnimatedSection>
-        <div className="container mx-auto px-4 py-16">
+        {/* <div className="container mx-auto px-4 py-16" > */}
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Testimonios de Nuestros Clientes
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Conoce las experiencias de quienes confían en nosotros
-          </p>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Compartir tu Experiencia
-          </Button>
-        </div>
+          <section
+            className="relative w-full min-h-[40vh] md:min-h-[50vh] flex items-center justify-center text-white"
+            style={{
+              backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0")`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+            {/* Overlay oscuro */}
+            <div className="absolute inset-0 bg-black/50"></div>
+
+            {/* Contenido centrado */}
+            <div className="relative max-w-4xl mx-auto px-4 text-center">
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">
+                Testimonios de Nuestros Clientes
+              </h1>
+              <p className="text-xl mb-8 text-gray-200">
+                Conoce las experiencias de quienes confían en nosotros
+              </p>
+              <Button 
+                size="lg" 
+                variant="secondary" 
+                className="shadow-lg"
+                onClick={() => setIsCreateOpen(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Compartir tu Experiencia
+              </Button>
+            </div>
+          </section>
 
         {isLoading ? (
           <div className="flex flex-col items-center space-y-4 py-16">
@@ -239,7 +271,7 @@ export default function Testimonials() {
             </form>
           </DialogContent>
         </Dialog>
-        </div>
+        {/* </div> */}
       </AnimatedSection>
 
       <Footer />

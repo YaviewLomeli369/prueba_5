@@ -112,58 +112,69 @@ export default function Blog() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {displayPosts.map((post) => 
                 isSuperuser ? (
-                  <BlogPostCardEditable key={post.id} post={post} />
+                  // Superuser: editable + link completo
+                  <div key={post.id} className="relative">
+                    <BlogPostCardEditable post={post} />
+
+                    {/* Botón de ver artículo */}
+                    <Link href={`/blog/${post.slug}`} key={post.id}  className="absolute top-2 right-2 flex items-center gap-1 text-blue-600 hover:underline cursor-pointer">
+                      <Eye className="w-4 h-4" />
+                      <span>Ver artículo</span>
+                    </Link>
+                  </div>
                 ) : (
-                  <Card key={post.id} className="hover:shadow-lg transition-shadow">
-                    {post.featuredImage && (
-                      <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                        <img 
-                          src={post.featuredImage} 
-                          alt={post.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {Array.isArray(post.tags) && post.tags.map((tag: string, index: number) => (
-                          <Badge key={`${post.id}-${tag}-${index}`} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <CardTitle className="line-clamp-2 text-base sm:text-lg break-word">
-                        <Link href={`/blog/${post.slug}`} className="hover:text-primary transition-colors block">
-                          {post.title}
-                        </Link>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-600 mb-4 line-clamp-3 text-sm break-word">
-                        {post.excerpt}
-                      </p>
-                      <div className="flex items-center justify-between text-sm text-gray-500 flex-wrap gap-2">
-                        <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap gap-2">
-                          <div className="flex items-center space-x-1">
-                            <User className="w-4 h-4" />
-                            <span>Admin</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{new Date(post.publishedAt || post.createdAt).toLocaleDateString()}</span>
-                          </div>
+                  // Usuario normal: clickable card completa
+                  <Link href={`/blog/${post.slug}`} key={post.id} className="block">
+                    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                      {post.featuredImage && (
+                        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                          <img 
+                            src={post.featuredImage} 
+                            alt={post.title}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
-                        {post.views && (
-                          <div className="flex items-center space-x-1">
-                            <Eye className="w-4 h-4" />
-                            <span>{post.views}</span>
+                      )}
+                      <CardHeader>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {Array.isArray(post.tags) && post.tags.map((tag: string, index: number) => (
+                            <Badge key={`${post.id}-${tag}-${index}`} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                        <CardTitle className="line-clamp-2 text-base sm:text-lg break-word">
+                          {post.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-600 mb-4 line-clamp-3 text-sm break-word">
+                          {post.excerpt}
+                        </p>
+                        <div className="flex items-center justify-between text-sm text-gray-500 flex-wrap gap-2">
+                          <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap gap-2">
+                            <div className="flex items-center space-x-1">
+                              <User className="w-4 h-4" />
+                              <span>Admin</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{new Date(post.publishedAt || post.createdAt).toLocaleDateString()}</span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                          {post.views && (
+                            <div className="flex items-center space-x-1">
+                              <Eye className="w-4 h-4" />
+                              <span>{post.views}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 )
               )}
+
             </div>
           )}
           </div>
