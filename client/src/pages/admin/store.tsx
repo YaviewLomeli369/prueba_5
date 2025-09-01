@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState , useEffect  } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { apiRequest } from "@/lib/queryClient";
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+
 import { 
   Package, 
   ShoppingCart, 
@@ -398,11 +399,13 @@ function AdminStoreContent() {
     }
   };
 
+  const [activeTab, setActiveTab] = useState("overview"); // ✅ ahora dentro del componente
+
   // Handle URL hash for direct navigation to tabs
-  React.useEffect(() => {
+  useEffect(() => {
     const hash = window.location.hash;
-    if (hash === '#categories') {
-      // Categories tab will be handled by defaultValue prop
+    if (hash) {
+      setActiveTab(hash.substring(1));
     }
   }, []);
 
