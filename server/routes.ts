@@ -333,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to update this profile" });
       }
 
-      // Don't allow regular users to update sensitive fields
+      // Don't allow users to update sensitive fields unless they are admin/superuser
       const updates = { ...req.body };
       if (currentUser?.role !== 'superuser' && currentUser?.role !== 'admin') {
         delete updates.role;

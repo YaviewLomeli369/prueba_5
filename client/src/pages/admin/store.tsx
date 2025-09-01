@@ -194,6 +194,24 @@ function AdminStoreContent() {
     },
   });
 
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => 
+      apiRequest(`/api/store/categories/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/store/categories"] });
+      setShowCategoryForm(false);
+      setSelectedCategory(null);
+      toast({ title: "Categoría actualizada exitosamente" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Error al actualizar categoría",
+        variant: "destructive" 
+      });
+    },
+  });
+
   const deleteCategoryMutation = useMutation({
     mutationFn: (id: string) => apiRequest(`/api/store/categories/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -351,7 +369,11 @@ function AdminStoreContent() {
       isActive: formData.get("isActive") === "on",
     };
 
-    createCategoryMutation.mutate(categoryData);
+    if (selectedCategory) {
+      updateCategoryMutation.mutate({ id: selectedCategory.id, data: categoryData });
+    } else {
+      createCategoryMutation.mutate(categoryData);
+    }
   };
 
   const formatPrice = (price: number, currency: string = 'MXN') => {
@@ -375,6 +397,16 @@ function AdminStoreContent() {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Handle URL hash for direct navigation to tabs
+  React.useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === '#categories') {
+      // Categories tab will be handled by defaultValue prop
+    }
+  }, []);
+
+  const defaultTab = window.location.hash === '#categories' ? 'categories' : 'products';
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -449,7 +481,7 @@ function AdminStoreContent() {
         </div>
       )}
 
-      <Tabs defaultValue="products" className="space-y-4">
+      <Tabs defaultValue={defaultTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="orders">Pedidos</TabsTrigger>
@@ -637,26 +669,30 @@ function AdminStoreContent() {
                       </div>
                       <p className="text-sm text-muted-foreground">{category.description}</p>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border shadow-lg">
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            if (window.confirm(`¿Estás seguro de que deseas eliminar la categoría "${category.name}"? Esta acción no se puede deshacer.`)) {
-                              deleteCategoryMutation.mutate(category.id);
-                            }
-                          }}
-                          className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setShowCategoryForm(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (window.confirm(`¿Estás seguro de que deseas eliminar la categoría "${category.name}"? Esta acción no se puede deshacer.`)) {
+                            deleteCategoryMutation.mutate(category.id);
+                          }
+                        }}
+                        className="text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -912,12 +948,22 @@ function AdminStoreContent() {
       </Dialog>
 
       {/* Category Form Dialog */}
-      <Dialog open={showCategoryForm} onOpenChange={setShowCategoryForm}>
+      <Dialog open={showCategoryForm} onOpenChange={(open) => {
+        setShowCategoryForm(open);
+        if (!open) {
+          setSelectedCategory(null);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nueva Categoría</DialogTitle>
+            <DialogTitle>
+              {selectedCategory ? "Editar Categoría" : "Nueva Categoría"}
+            </DialogTitle>
             <DialogDescription>
-              Crea una nueva categoría para organizar tus productos
+              {selectedCategory 
+                ? "Modifica los datos de la categoría" 
+                : "Crea una nueva categoría para organizar tus productos"
+              }
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCategorySubmit} className="space-y-4">
@@ -926,6 +972,7 @@ function AdminStoreContent() {
               <Input
                 id="categoryName"
                 name="name"
+                defaultValue={selectedCategory?.name}
                 required
               />
             </div>
@@ -935,6 +982,7 @@ function AdminStoreContent() {
               <Textarea
                 id="categoryDescription"
                 name="description"
+                defaultValue={selectedCategory?.description}
                 rows={3}
               />
             </div>
@@ -943,17 +991,27 @@ function AdminStoreContent() {
               <Switch
                 id="categoryIsActive"
                 name="isActive"
-                defaultChecked={true}
+                defaultChecked={selectedCategory?.isActive ?? true}
               />
               <Label htmlFor="categoryIsActive">Categoría Activa</Label>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowCategoryForm(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowCategoryForm(false);
+                  setSelectedCategory(null);
+                }}
+              >
                 Cancelar
               </Button>
-              <Button type="submit">
-                Crear Categoría
+              <Button type="submit" disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}>
+                {createCategoryMutation.isPending || updateCategoryMutation.isPending 
+                  ? "Guardando..." 
+                  : selectedCategory ? "Actualizar Categoría" : "Crear Categoría"
+                }
               </Button>
             </DialogFooter>
           </form>
