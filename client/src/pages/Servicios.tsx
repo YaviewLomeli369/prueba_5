@@ -143,7 +143,14 @@ function Servicios() {
   if (isLoading) return <PageLoader message="Cargando servicios..." />;
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div 
+      className="min-h-screen bg-background overflow-x-hidden"
+      style={{
+        backgroundColor: appearance.backgroundColor || "inherit",
+        color: appearance.textColor || "inherit",
+        fontFamily: appearance.fontFamily || "inherit",
+      }}
+    >
       <SEOHead
         title="Servicios de Desarrollo Web | Soluciones Profesionales"
         description="Descubre nuestros servicios de diseño web, SEO y marketing digital. Planes flexibles para impulsar tu negocio online."

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaqItem } from "@/components/faq-item";
 import { FaqCardEditable } from "@/components/faq/faq-card-editable";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Search, HelpCircle, Filter } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { Faq, FaqCategory } from "@shared/schema";
+import type { Faq, FaqCategory, SiteConfig } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -48,6 +48,17 @@ export default function Faqs() {
   });
   const { data: categories, isLoading: categoriesLoading } =
     useQuery<FaqCategory[]>({ queryKey: ["/api/faq-categories"] });
+
+  const { data: config, isLoading: configLoading } = useQuery<SiteConfig>({
+    queryKey: ["/api/config"],
+  });
+
+  const { appearance } = useMemo(() => {
+    const configData = config?.config as any;
+    return {
+      appearance: configData?.appearance || {},
+    };
+  }, [config]);
 
   const incrementViewsMutation = useMutation({
     mutationFn: async (faqId: string) =>
@@ -113,7 +124,7 @@ export default function Faqs() {
     incrementViewsMutation.mutate(faqId);
   const handleVoteHelpful = (faqId: string) =>
     voteHelpfulMutation.mutate(faqId);
-  const isLoading = faqsLoading || categoriesLoading;
+  const isLoading = faqsLoading || categoriesLoading || configLoading;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -123,18 +134,32 @@ export default function Faqs() {
       <section
         className="relative w-full min-h-[40vh] md:min-h-[50vh] flex items-center justify-center text-white"
         style={{
-          backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.1.0")`,
+          backgroundImage: `url(${appearance.heroImage || "https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.1.0"})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
+          backgroundColor: appearance.heroBackgroundColor || "#000000",
+          color: appearance.heroTextColor || "#ffffff",
         }}
       >
-        <div className="absolute inset-0 bg-black/60"></div>
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{ backgroundColor: appearance.heroOverlayColor || "#000000" }}
+        ></div>
         <div className="relative max-w-4xl mx-auto px-4 text-center">
-          <HelpCircle className="h-14 w-14 mx-auto text-blue-400 mb-4 animate-bounce" />
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+          <HelpCircle
+            className="h-14 w-14 mx-auto text-blue-400 mb-4 animate-bounce"
+            color={appearance.iconColor || "#93c5fd"}
+          />
+          <h1
+            className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg"
+            style={{ color: appearance.headingColor || "#ffffff" }}
+          >
             Preguntas Frecuentes
           </h1>
-          <p className="text-lg md:text-xl text-gray-200">
+          <p
+            className="text-lg md:text-xl text-gray-200"
+            style={{ color: appearance.subheadingColor || "#e5e7eb" }}
+          >
             Encuentra respuestas rápidas a las preguntas más comunes
           </p>
         </div>
@@ -146,7 +171,10 @@ export default function Faqs() {
           <AnimatedSection delay={0.2}>
             <Card className="mb-10 shadow-lg border-0 rounded-2xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-600">
+                <CardTitle
+                  className="flex items-center gap-2 text-blue-600"
+                  style={{ color: appearance.primaryColor || "#000000" }}
+                >
                   <Filter className="h-5 w-5" />
                   Buscar y Filtrar
                 </CardTitle>
@@ -186,37 +214,43 @@ export default function Faqs() {
           </AnimatedSection>
 
           {/* Categories Overview */}
-          {categories && categories.length > 0 && selectedCategory === "all" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-              {categories.map((cat) => {
-                const count = publishedFaqs.filter(
-                  (f) => f.categoryId === cat.id
-                ).length;
-                return (
-                  <div
-                    key={cat.id}
-                    className="p-5 border rounded-2xl shadow hover:shadow-xl hover:bg-blue-50 cursor-pointer transition-all duration-300"
-                    onClick={() => setSelectedCategory(cat.id)}
-                  >
-                    <h3 className="font-bold text-lg text-gray-900 mb-1">
-                      {cat.name}
-                    </h3>
-                    {cat.description && (
-                      <p className="text-sm text-gray-600 mb-2">
-                        {cat.description}
-                      </p>
-                    )}
-                    <Badge
-                      variant="outline"
-                      className="text-blue-600 font-semibold"
+          {categories &&
+            categories.length > 0 &&
+            selectedCategory === "all" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                {categories.map((cat) => {
+                  const count = publishedFaqs.filter(
+                    (f) => f.categoryId === cat.id
+                  ).length;
+                  return (
+                    <div
+                      key={cat.id}
+                      className="p-5 border rounded-2xl shadow hover:shadow-xl hover:bg-blue-50 cursor-pointer transition-all duration-300"
+                      onClick={() => setSelectedCategory(cat.id)}
                     >
-                      {count} {count === 1 ? "pregunta" : "preguntas"}
-                    </Badge>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      <h3 className="font-bold text-lg text-gray-900 mb-1">
+                        {cat.name}
+                      </h3>
+                      {cat.description && (
+                        <p className="text-sm text-gray-600 mb-2">
+                          {cat.description}
+                        </p>
+                      )}
+                      <Badge
+                        variant="outline"
+                        className="text-blue-600 font-semibold"
+                        style={{
+                          color: appearance.primaryColor || "#000000",
+                          borderColor: appearance.primaryColor || "#000000",
+                        }}
+                      >
+                        {count} {count === 1 ? "pregunta" : "preguntas"}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
           {/* FAQs */}
           {isLoading ? (
@@ -230,11 +264,16 @@ export default function Faqs() {
                   {faqsByCategory.map(({ category, faqs }) => (
                     <section key={category.id}>
                       <div className="mb-6">
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                        <h2
+                          className="text-2xl font-semibold text-gray-900 mb-2"
+                          style={{ color: appearance.headingColor || "#000000" }}
+                        >
                           {category.name}
                         </h2>
                         {category.description && (
-                          <p className="text-gray-600">{category.description}</p>
+                          <p className="text-gray-600">
+                            {category.description}
+                          </p>
                         )}
                       </div>
                       <div className="space-y-4">
@@ -259,7 +298,10 @@ export default function Faqs() {
                   {uncategorizedFaqs.length > 0 && (
                     <section>
                       <div className="mb-6">
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                        <h2
+                          className="text-2xl font-semibold text-gray-900 mb-2"
+                          style={{ color: appearance.headingColor || "#000000" }}
+                        >
                           Preguntas Generales
                         </h2>
                       </div>
@@ -286,7 +328,10 @@ export default function Faqs() {
                 <section>
                   <div className="mb-6 flex items-center justify-between">
                     <div>
-                      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                      <h2
+                        className="text-2xl font-semibold text-gray-900 mb-2"
+                        style={{ color: appearance.headingColor || "#000000" }}
+                      >
                         {
                           categories?.find((c) => c.id === selectedCategory)
                             ?.name
@@ -305,6 +350,10 @@ export default function Faqs() {
                     <Button
                       variant="outline"
                       onClick={() => setSelectedCategory("all")}
+                      style={{
+                        borderColor: appearance.primaryColor || "#000000",
+                        color: appearance.primaryColor || "#000000",
+                      }}
                     >
                       Ver Todas las Categorías
                     </Button>
@@ -332,8 +381,14 @@ export default function Faqs() {
               {filteredFaqs.length === 0 && (
                 <Card className="text-center py-20 bg-blue-50 rounded-xl shadow-lg">
                   <CardContent>
-                    <HelpCircle className="h-20 w-20 mx-auto text-blue-400 mb-6 animate-pulse" />
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    <HelpCircle
+                      className="h-20 w-20 mx-auto text-blue-400 mb-6 animate-pulse"
+                      color={appearance.iconColor || "#93c5fd"}
+                    />
+                    <h3
+                      className="text-2xl font-bold text-gray-900 mb-2"
+                      style={{ color: appearance.headingColor || "#000000" }}
+                    >
                       {searchTerm || selectedCategory !== "all"
                         ? "No se encontraron preguntas"
                         : "Aún no hay preguntas frecuentes"}
@@ -350,6 +405,7 @@ export default function Faqs() {
                           setSelectedCategory("all");
                         }}
                         className="bg-blue-600 text-white hover:bg-blue-700"
+                        style={{ backgroundColor: appearance.primaryColor || "#000000" }}
                       >
                         Limpiar Filtros
                       </Button>

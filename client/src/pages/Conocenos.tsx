@@ -1,14 +1,32 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { SEOHead } from "@/components/seo-head";
 import { Card, CardContent } from "@/components/ui/card";
 import { Target, Eye, Star, User, Phone, Mail, Quote } from "lucide-react"; 
 import AnimatedSection from "@/components/AnimatedSection";
+import type { SiteConfig } from "@shared/schema";
 
 function Conocenos() {
+  const { data: config } = useQuery<SiteConfig>({
+    queryKey: ["/api/config"],
+  });
+
+  const appearance = useMemo(() => {
+    const configData = config?.config as any;
+    return configData?.appearance || {};
+  }, [config]);
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div 
+      className="min-h-screen bg-background flex flex-col"
+      style={{
+        backgroundColor: appearance.backgroundColor || "inherit",
+        color: appearance.textColor || "inherit",
+        fontFamily: appearance.fontFamily || "inherit",
+      }}
+    >
       <SEOHead
         title="Conócenos"
         description="Descubre quiénes somos, nuestra misión, visión y valores."

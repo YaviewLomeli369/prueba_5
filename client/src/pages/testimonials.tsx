@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, MessageSquare } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { Testimonial } from "@shared/schema";
+import type { Testimonial, SiteConfig } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import AnimatedSection from "@/components/AnimatedSection";
@@ -84,7 +84,14 @@ export default function Testimonials() {
   const regularTestimonials = approvedTestimonials.filter(t => !t.isFeatured);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen bg-background"
+      style={{
+        backgroundColor: appearance.backgroundColor || "inherit",
+        color: appearance.textColor || "inherit",
+        fontFamily: appearance.fontFamily || "inherit",
+      }}
+    >
       <Navbar />
       
       <AnimatedSection>

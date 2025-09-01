@@ -20,7 +20,7 @@ import {
   MessageSquare
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { ContactInfo } from "@shared/schema";
+import type { ContactInfo, SiteConfig } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Contact() {
@@ -31,6 +31,15 @@ export default function Contact() {
     message: "",
   });
   const { toast } = useToast();
+
+  const { data: config } = useQuery<SiteConfig>({
+    queryKey: ["/api/config"],
+  });
+
+  const appearance = useMemo(() => {
+    const configData = config?.config as any;
+    return configData?.appearance || {};
+  }, [config]);
 
   const { data: contactInfo, isLoading, error } = useQuery<ContactInfo>({
     queryKey: ["/api/contact/info"],
@@ -89,7 +98,14 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen bg-background"
+      style={{
+        backgroundColor: appearance.backgroundColor || "inherit",
+        color: appearance.textColor || "inherit",
+        fontFamily: appearance.fontFamily || "inherit",
+      }}
+    >
       <Navbar />
       
       <AnimatedSection>
