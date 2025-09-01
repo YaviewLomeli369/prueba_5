@@ -1789,6 +1789,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getLowStockProducts()
       ]);
 
+      // Filter out cancelled orders for revenue calculation
+      const validOrders = totalOrders.filter(order => order.status !== 'cancelled');
+      
       const stats = {
         totalProducts: totalProducts.length,
         activeProducts: activeProducts.length,
@@ -1796,9 +1799,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pendingOrders: pendingOrders.length,
         totalCustomers: totalCustomers.length,
         lowStockProducts: lowStockProducts.length,
-        totalRevenue: totalOrders.reduce((sum, order) => sum + order.total, 0),
-        averageOrderValue: totalOrders.length > 0 ?
-          totalOrders.reduce((sum, order) => sum + order.total, 0) / totalOrders.length : 0
+        totalRevenue: validOrders.reduce((sum, order) => sum + order.total, 0),
+        averageOrderValue: validOrders.length > 0 ?
+          validOrders.reduce((sum, order) => sum + order.total, 0) / validOrders.length : 0
       };
 
       res.json(stats);
