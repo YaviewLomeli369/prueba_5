@@ -46,7 +46,7 @@ const getAllSidebarItems = (): SidebarItem[] => [
   { href: "/admin/faqs", label: "FAQs", icon: HelpCircle, section: "Contenido", moduleRequired: "faqs" },
   { href: "/admin/blog", label: "Blog", icon: FileText, section: "Contenido", moduleRequired: "blog" },
   { href: "/admin/store", label: "Productos", icon: ShoppingCart, section: "Módulos de Negocio", moduleRequired: "tienda" },
-  { href: "/admin/store#categories", label: "Categorías", icon: Package, section: "Módulos de Negocio", moduleRequired: "tienda" },
+  // { href: "/admin/store#categories", label: "Categorías", icon: Package, section: "Módulos de Negocio", moduleRequired: "tienda" },
   { href: "/admin/inventory", label: "Inventario", icon: Warehouse, section: "Módulos de Negocio", moduleRequired: "tienda" },
   { href: "/admin/orders", label: "Pedidos", icon: Package, section: "Módulos de Negocio", moduleRequired: "tienda" },
   { href: "/admin/payments", label: "Pagos", icon: CreditCard, section: "Módulos de Negocio", moduleRequired: "tienda" },

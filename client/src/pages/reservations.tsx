@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { SiteConfig, InsertReservation, ReservationSettings } from "@shared/schema";
 import { Calendar, Clock, Users, Phone, Mail, AlertCircle, CheckCircle } from "lucide-react";
 import AnimatedSection from "@/components/AnimatedSection";
+import { Textarea } from "@/components/ui/textarea"
 
 export default function Reservations() {
   const { toast } = useToast();
