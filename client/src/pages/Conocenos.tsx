@@ -175,49 +175,6 @@ function Conocenos() {
                 </Card>
               </AnimatedSection>
 
-              <AnimatedSection delay={0.6}>
-                <Card className="group relative overflow-hidden rounded-3xl border border-gray-100 shadow-md hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
-                  <CardContent className="p-8 text-center">
-                    <div className="relative w-32 h-32 mx-auto mb-6">
-                      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 p-1">
-                        <img
-                          src="https://via.placeholder.com/200"
-                          alt="Miembro del equipo"
-                          className="rounded-full object-cover w-full h-full border-4 border-white shadow-md"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                        <div className="flex items-center justify-center w-full h-full rounded-full bg-white">
-                          <User className="h-16 w-16 text-gray-400" />
-                        </div>
-                      </div>
-                    </div>
-                    <h4 className="font-semibold text-xl text-gray-800">Nombre Apellido</h4>
-                    <p className="text-sm text-gray-500 mb-4">Cargo / Rol</p>
-                    <div className="italic text-gray-600 mb-4 flex items-center justify-center gap-2">
-                      <Quote className="h-4 w-4 text-blue-500" />
-                      <span>"Mi compromiso es dar lo mejor en cada proyecto."</span>
-                    </div>
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <div className="flex items-center justify-center gap-2">
-                        <Phone className="h-4 w-4 text-green-600" />
-                        <a href="tel:+525511223344" className="hover:underline">
-                          +52 55 1122 3344
-                        </a>
-                      </div>
-                      <div className="flex items-center justify-center gap-2">
-                        <Mail className="h-4 w-4 text-blue-600" />
-                        <a href="mailto:correo@empresa.com" className="hover:underline">
-                          correo@empresa.com
-                        </a>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </AnimatedSection>
-
               {/* Repite para más miembros */}
             </div>
           </div>
