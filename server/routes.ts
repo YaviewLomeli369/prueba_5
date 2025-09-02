@@ -1596,12 +1596,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { status } = req.body;
+      
+      // Validate status value
+      const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid order status" });
+      }
+      
       const updatedOrder = await storage.updateOrderStatus(id, status);
       if (!updatedOrder) {
         return res.status(404).json({ message: "Order not found" });
       }
       res.json(updatedOrder);
     } catch (error) {
+      console.error("Error updating order status:", error);
       res.status(400).json({ message: error instanceof Error ? error.message : "Invalid data" });
     }
   });
@@ -2479,9 +2487,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/store/orders/:id", requireAuth, requireRole(['admin', 'superuser']), async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Ensure we have valid data
+      if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ message: "Invalid request body" });
+      }
+      
       const updateData = req.body;
+      
+      // Validate status if being updated
+      if (updateData.status) {
+        const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+        if (!validStatuses.includes(updateData.status)) {
+          return res.status(400).json({ message: "Invalid order status" });
+        }
+      }
 
       const updatedOrder = await storage.updateOrder(id, updateData);
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
       res.json(updatedOrder);
     } catch (error: any) {
       console.error("Error updating order:", error);

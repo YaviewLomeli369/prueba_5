@@ -16,11 +16,11 @@ export async function apiRequest(
 ): Promise<any> {
   const token = localStorage.getItem('auth_token');
   const headers: Record<string, string> = {};
-  
+
   if (options.body) {
     headers["Content-Type"] = "application/json";
   }
-  
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -44,7 +44,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const token = localStorage.getItem('auth_token');
     const headers: Record<string, string> = {};
-    
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }

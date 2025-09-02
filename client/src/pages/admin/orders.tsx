@@ -91,7 +91,10 @@ export default function AdminOrders() {
     mutationFn: ({ orderId, status }: { orderId: string; status: string }) => 
       apiRequest(`/api/store/orders/${orderId}/status`, {
         method: "PUT",
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/orders"] });
@@ -101,9 +104,10 @@ export default function AdminOrders() {
       });
     },
     onError: (error: any) => {
+      console.error("Error updating order status:", error);
       toast({
         title: "Error",
-        description: "No se pudo actualizar el estado del pedido",
+        description: error?.message || "No se pudo actualizar el estado del pedido",
         variant: "destructive"
       });
     }
