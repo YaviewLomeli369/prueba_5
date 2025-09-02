@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,10 @@ export default function ShippingInfoPage() {
     phone: ""
   });
 
+  // Estados para controlar los selects y evitar conflictos DOM
+  const [shippingSelectKey, setShippingSelectKey] = useState(0);
+  const [billingSelectKey, setBillingSelectKey] = useState(0);
+
   const mexicanStates = [
     "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
     "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México",
@@ -72,7 +76,43 @@ export default function ShippingInfoPage() {
     "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Función para manejar cambios en customer info de forma segura
+  const handleCustomerInfoChange = useCallback((field: keyof CustomerInfo, value: string) => {
+    setCustomerInfo(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // Función para manejar cambios en shipping address de forma segura
+  const handleShippingAddressChange = useCallback((field: keyof ShippingAddress, value: string) => {
+    setShippingAddress(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // Función para manejar cambios en billing address de forma segura
+  const handleBillingAddressChange = useCallback((field: keyof ShippingAddress, value: string) => {
+    setBillingAddress(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // Manejar cambio de estado de envío con refresco del select
+  const handleShippingStateChange = useCallback((value: string) => {
+    setShippingAddress(prev => ({ ...prev, state: value }));
+    // Forzar re-render del select para evitar problemas DOM
+    setTimeout(() => setShippingSelectKey(prev => prev + 1), 100);
+  }, []);
+
+  // Manejar cambio de estado de facturación con refresco del select
+  const handleBillingStateChange = useCallback((value: string) => {
+    setBillingAddress(prev => ({ ...prev, state: value }));
+    // Forzar re-render del select para evitar problemas DOM
+    setTimeout(() => setBillingSelectKey(prev => prev + 1), 100);
+  }, []);
+
+  // Efecto para limpiar el DOM cuando se cambia billingDifferent
+  useEffect(() => {
+    if (billingDifferent) {
+      setBillingSelectKey(prev => prev + 1);
+    }
+  }, [billingDifferent]);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
     // Validar campos requeridos
@@ -92,19 +132,30 @@ export default function ShippingInfoPage() {
       return;
     }
 
-    // Guardar información en localStorage
-    const checkoutData = {
-      customerInfo,
-      shippingAddress,
-      billingAddress: billingDifferent ? billingAddress : shippingAddress,
-      timestamp: Date.now()
-    };
+    try {
+      // Guardar información en localStorage
+      const checkoutData = {
+        customerInfo,
+        shippingAddress,
+        billingAddress: billingDifferent ? billingAddress : shippingAddress,
+        timestamp: Date.now()
+      };
 
-    localStorage.setItem('checkout-info', JSON.stringify(checkoutData));
+      localStorage.setItem('checkout-info', JSON.stringify(checkoutData));
 
-    // Redirigir a checkout
-    setLocation('/checkout');
-  };
+      // Redirigir a checkout con un pequeño delay para evitar conflictos
+      setTimeout(() => {
+        setLocation('/checkout');
+      }, 100);
+    } catch (error) {
+      console.error('Error saving checkout data:', error);
+      toast({
+        title: "Error",
+        description: "Error al guardar la información. Intenta de nuevo.",
+        variant: "destructive"
+      });
+    }
+  }, [customerInfo, shippingAddress, billingAddress, billingDifferent, setLocation, toast]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -141,9 +192,11 @@ export default function ShippingInfoPage() {
                   <Input
                     id="customer-firstName"
                     value={customerInfo.firstName}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, firstName: e.target.value })}
+                    onChange={(e) => handleCustomerInfoChange('firstName', e.target.value)}
                     required
                     autoComplete="given-name"
+                    autoCorrect="off"
+                    autoCapitalize="words"
                   />
                 </div>
                 <div className="space-y-2">
@@ -151,9 +204,11 @@ export default function ShippingInfoPage() {
                   <Input
                     id="customer-lastName"
                     value={customerInfo.lastName}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, lastName: e.target.value })}
+                    onChange={(e) => handleCustomerInfoChange('lastName', e.target.value)}
                     required
                     autoComplete="family-name"
+                    autoCorrect="off"
+                    autoCapitalize="words"
                   />
                 </div>
               </div>
@@ -164,9 +219,11 @@ export default function ShippingInfoPage() {
                   id="email"
                   type="email"
                   value={customerInfo.email}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                  onChange={(e) => handleCustomerInfoChange('email', e.target.value)}
                   required
                   autoComplete="email"
+                  autoCorrect="off"
+                  autoCapitalize="none"
                 />
               </div>
 
@@ -176,8 +233,9 @@ export default function ShippingInfoPage() {
                   id="customer-phone"
                   type="tel"
                   value={customerInfo.phone || ""}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                  onChange={(e) => handleCustomerInfoChange('phone', e.target.value)}
                   autoComplete="tel"
+                  autoCorrect="off"
                 />
               </div>
             </CardContent>
@@ -195,9 +253,11 @@ export default function ShippingInfoPage() {
                   <Input
                     id="shipping-firstName"
                     value={shippingAddress.firstName}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, firstName: e.target.value })}
+                    onChange={(e) => handleShippingAddressChange('firstName', e.target.value)}
                     required
                     autoComplete="given-name"
+                    autoCorrect="off"
+                    autoCapitalize="words"
                   />
                 </div>
                 <div className="space-y-2">
@@ -205,9 +265,11 @@ export default function ShippingInfoPage() {
                   <Input
                     id="shipping-lastName"
                     value={shippingAddress.lastName}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, lastName: e.target.value })}
+                    onChange={(e) => handleShippingAddressChange('lastName', e.target.value)}
                     required
                     autoComplete="family-name"
+                    autoCorrect="off"
+                    autoCapitalize="words"
                   />
                 </div>
               </div>
@@ -217,10 +279,11 @@ export default function ShippingInfoPage() {
                 <Input
                   id="address1"
                   value={shippingAddress.address1}
-                  onChange={(e) => setShippingAddress({ ...shippingAddress, address1: e.target.value })}
+                  onChange={(e) => handleShippingAddressChange('address1', e.target.value)}
                   placeholder="Calle y número"
                   required
                   autoComplete="address-line1"
+                  autoCorrect="off"
                 />
               </div>
 
@@ -229,9 +292,10 @@ export default function ShippingInfoPage() {
                 <Input
                   id="address2"
                   value={shippingAddress.address2 || ""}
-                  onChange={(e) => setShippingAddress({ ...shippingAddress, address2: e.target.value })}
+                  onChange={(e) => handleShippingAddressChange('address2', e.target.value)}
                   placeholder="Colonia, edificio, piso, etc."
                   autoComplete="address-line2"
+                  autoCorrect="off"
                 />
               </div>
 
@@ -241,21 +305,34 @@ export default function ShippingInfoPage() {
                   <Input
                     id="city"
                     value={shippingAddress.city}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                    onChange={(e) => handleShippingAddressChange('city', e.target.value)}
                     required
                     autoComplete="address-level2"
+                    autoCorrect="off"
+                    autoCapitalize="words"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="state">Estado *</Label>
                   <Select
+                    key={`shipping-state-${shippingSelectKey}`}
                     value={shippingAddress.state || ""}
-                    onValueChange={(value) => setShippingAddress({ ...shippingAddress, state: value })}
+                    onValueChange={handleShippingStateChange}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        // Pequeño delay para evitar conflictos DOM al cerrar
+                        setTimeout(() => setShippingSelectKey(prev => prev + 1), 50);
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona estado *" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent 
+                      position="popper"
+                      className="max-h-[200px]"
+                      sideOffset={4}
+                    >
                       {mexicanStates.map((state) => (
                         <SelectItem key={state} value={state}>
                           {state}
@@ -269,9 +346,12 @@ export default function ShippingInfoPage() {
                   <Input
                     id="zipCode"
                     value={shippingAddress.zipCode}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value })}
+                    onChange={(e) => handleShippingAddressChange('zipCode', e.target.value)}
                     required
                     autoComplete="postal-code"
+                    autoCorrect="off"
+                    pattern="[0-9]*"
+                    inputMode="numeric"
                   />
                 </div>
               </div>
@@ -282,8 +362,10 @@ export default function ShippingInfoPage() {
                   id="shipping-phone"
                   type="tel"
                   value={shippingAddress.phone || ""}
-                  onChange={(e) => setShippingAddress({ ...shippingAddress, phone: e.target.value })}
+                  onChange={(e) => handleShippingAddressChange('phone', e.target.value)}
                   autoComplete="tel"
+                  autoCorrect="off"
+                  inputMode="tel"
                 />
               </div>
 
@@ -293,7 +375,13 @@ export default function ShippingInfoPage() {
                   type="checkbox"
                   id="billing-different"
                   checked={billingDifferent}
-                  onChange={(e) => setBillingDifferent(e.target.checked)}
+                  onChange={(e) => {
+                    setBillingDifferent(e.target.checked);
+                    // Reset billing select cuando se cambia
+                    if (e.target.checked) {
+                      setBillingSelectKey(prev => prev + 1);
+                    }
+                  }}
                 />
                 <label htmlFor="billing-different" className="text-sm">
                   ¿La dirección de facturación es diferente?
@@ -312,9 +400,11 @@ export default function ShippingInfoPage() {
                         <Input
                           id="billing-firstName"
                           value={billingAddress.firstName}
-                          onChange={(e) => setBillingAddress({ ...billingAddress, firstName: e.target.value })}
+                          onChange={(e) => handleBillingAddressChange('firstName', e.target.value)}
                           required={billingDifferent}
                           autoComplete="given-name"
+                          autoCorrect="off"
+                          autoCapitalize="words"
                         />
                       </div>
                       <div className="space-y-2">
@@ -322,9 +412,11 @@ export default function ShippingInfoPage() {
                         <Input
                           id="billing-lastName"
                           value={billingAddress.lastName}
-                          onChange={(e) => setBillingAddress({ ...billingAddress, lastName: e.target.value })}
+                          onChange={(e) => handleBillingAddressChange('lastName', e.target.value)}
                           required={billingDifferent}
                           autoComplete="family-name"
+                          autoCorrect="off"
+                          autoCapitalize="words"
                         />
                       </div>
                     </div>
@@ -334,9 +426,10 @@ export default function ShippingInfoPage() {
                       <Input
                         id="billing-address1"
                         value={billingAddress.address1}
-                        onChange={(e) => setBillingAddress({ ...billingAddress, address1: e.target.value })}
+                        onChange={(e) => handleBillingAddressChange('address1', e.target.value)}
                         required={billingDifferent}
                         autoComplete="address-line1"
+                        autoCorrect="off"
                       />
                     </div>
 
@@ -345,8 +438,9 @@ export default function ShippingInfoPage() {
                       <Input
                         id="billing-address2"
                         value={billingAddress.address2 || ""}
-                        onChange={(e) => setBillingAddress({ ...billingAddress, address2: e.target.value })}
+                        onChange={(e) => handleBillingAddressChange('address2', e.target.value)}
                         autoComplete="address-line2"
+                        autoCorrect="off"
                       />
                     </div>
 
@@ -356,21 +450,34 @@ export default function ShippingInfoPage() {
                         <Input
                           id="billing-city"
                           value={billingAddress.city}
-                          onChange={(e) => setBillingAddress({ ...billingAddress, city: e.target.value })}
+                          onChange={(e) => handleBillingAddressChange('city', e.target.value)}
                           required={billingDifferent}
                           autoComplete="address-level2"
+                          autoCorrect="off"
+                          autoCapitalize="words"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="billing-state">Estado *</Label>
                         <Select
+                          key={`billing-state-${billingSelectKey}`}
                           value={billingAddress.state || ""}
-                          onValueChange={(value) => setBillingAddress({ ...billingAddress, state: value })}
+                          onValueChange={handleBillingStateChange}
+                          onOpenChange={(open) => {
+                            if (!open) {
+                              // Pequeño delay para evitar conflictos DOM al cerrar
+                              setTimeout(() => setBillingSelectKey(prev => prev + 1), 50);
+                            }
+                          }}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona estado *" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent 
+                            position="popper"
+                            className="max-h-[200px]"
+                            sideOffset={4}
+                          >
                             {mexicanStates.map((state) => (
                               <SelectItem key={state} value={state}>
                                 {state}
@@ -384,9 +491,12 @@ export default function ShippingInfoPage() {
                         <Input
                           id="billing-zipCode"
                           value={billingAddress.zipCode}
-                          onChange={(e) => setBillingAddress({ ...billingAddress, zipCode: e.target.value })}
+                          onChange={(e) => handleBillingAddressChange('zipCode', e.target.value)}
                           required={billingDifferent}
                           autoComplete="postal-code"
+                          autoCorrect="off"
+                          pattern="[0-9]*"
+                          inputMode="numeric"
                         />
                       </div>
                     </div>
@@ -397,8 +507,10 @@ export default function ShippingInfoPage() {
                         id="billing-phone"
                         type="tel"
                         value={billingAddress.phone || ""}
-                        onChange={(e) => setBillingAddress({ ...billingAddress, phone: e.target.value })}
+                        onChange={(e) => handleBillingAddressChange('phone', e.target.value)}
                         autoComplete="tel"
+                        autoCorrect="off"
+                        inputMode="tel"
                       />
                     </div>
                   </CardContent>
@@ -408,7 +520,12 @@ export default function ShippingInfoPage() {
           </Card>
 
           <div className="flex justify-center">
-            <Button type="submit" size="lg" className="w-full md:w-auto">
+            <Button 
+              type="submit" 
+              size="lg" 
+              className="w-full md:w-auto"
+              disabled={false}
+            >
               Continuar al Pago
             </Button>
           </div>
