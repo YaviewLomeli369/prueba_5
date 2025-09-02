@@ -107,7 +107,7 @@ export default function Testimonials() {
             }}
           >
             {/* Overlay oscuro */}
-            <div className="absolute inset-0 bg-black/50"></div>
+            <div className="absolute inset-0 bg-black/60"></div>
 
             {/* Contenido centrado */}
             <div className="relative max-w-4xl mx-auto px-4 text-center">
