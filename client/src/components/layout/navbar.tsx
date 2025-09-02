@@ -103,12 +103,13 @@ export function Navbar() {
       const windowWidth = window.innerWidth;
       const newIsDesktop = windowWidth > 1075;
       
-      setIsDesktop(newIsDesktop);
-      
-      // Close mobile menu if window becomes wider than 1075px
-      if (newIsDesktop && isMobileMenuOpen) {
+      // Only close mobile menu if transitioning from mobile to desktop
+      // and the menu was previously open
+      if (!isDesktop && newIsDesktop && isMobileMenuOpen) {
         setIsMobileMenuOpen(false);
       }
+      
+      setIsDesktop(newIsDesktop);
     };
 
     window.addEventListener('resize', handleResize);
@@ -119,7 +120,7 @@ export function Navbar() {
       document.body.classList.remove('modal-open', 'overflow-hidden');
       document.body.style.overflow = '';
     };
-  }, [isMobileMenuOpen]);
+  }, [isDesktop, isMobileMenuOpen]);
 
   // Enhanced link component with proper event handling
   const NavLink = useCallback(({ href, children, className, onClick }: {
@@ -186,10 +187,11 @@ export function Navbar() {
           <div className="flex items-center space-x-2">
             {/* Shopping Cart - Only show if store module is active */}
             {modules.tienda?.activo && (
-              <NavLink href="/store">
-                <Button variant="ghost" size="sm" className="pointer-events-none">
-                  <ShoppingCart className="h-4 w-4" />
-                </Button>
+              <NavLink 
+                href="/store"
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3"
+              >
+                <ShoppingCart className="h-4 w-4" />
               </NavLink>
             )}
 
@@ -198,13 +200,13 @@ export function Navbar() {
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <button className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
                           {user?.username?.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                    </Button>
+                    </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <div className="flex items-center justify-start gap-2 p-2">
@@ -236,15 +238,17 @@ export function Navbar() {
                 </DropdownMenu>
               ) : (
                 <>
-                  <NavLink href="/login">
-                    <Button variant="ghost" size="sm" className="pointer-events-none">
-                      Iniciar Sesión
-                    </Button>
+                  <NavLink 
+                    href="/login"
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3"
+                  >
+                    Iniciar Sesión
                   </NavLink>
-                  <NavLink href="/register">
-                    <Button size="sm" className="pointer-events-none">
-                      Registrarse
-                    </Button>
+                  <NavLink 
+                    href="/register"
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3"
+                  >
+                    Registrarse
                   </NavLink>
                 </>
               )}
@@ -253,9 +257,9 @@ export function Navbar() {
             {/* Mobile Menu - Show when screen width <= 1075px */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className={isDesktop ? 'hidden' : 'block'}>
+                <button className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 ${isDesktop ? 'hidden' : 'block'}`}>
                   <Menu className="h-5 w-5" />
-                </Button>
+                </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px] flex flex-col">
                 <SheetHeader className="flex-shrink-0">
