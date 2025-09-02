@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import AnimatedSection from "@/components/AnimatedSection";
@@ -21,8 +22,6 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import type { ContactInfo, SiteConfig } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { useMobileNavigationCleanup } from "@/hooks/use-mobile-navigation";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -53,16 +52,6 @@ export default function Contact() {
     },
     retry: false,
   });
-
-  // Debug logging
-  React.useEffect(() => {
-    if (error) {
-      console.error("Contact Info Query Error:", error);
-    }
-    if (contactInfo) {
-      console.log("Contact Info Data:", contactInfo);
-    }
-  }, [error, contactInfo]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -97,15 +86,6 @@ export default function Contact() {
   ) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
   };
-
-  const { forceCleanup } = useMobileNavigationCleanup();
-
-  // Cleanup on unmount for mobile
-  React.useEffect(() => {
-    return () => {
-      forceCleanup();
-    };
-  }, [forceCleanup]);
 
   return (
     <div 
@@ -374,7 +354,6 @@ export default function Contact() {
                   <CardTitle>Nuestra Ubicación</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {/* <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden"> */}
                     {contactInfo.mapsUrl ? (
                       <iframe
                         src={contactInfo.mapsUrl}
@@ -391,7 +370,6 @@ export default function Contact() {
                         <p className="text-sm mt-2">Mapa interactivo disponible próximamente</p>
                       </div>
                     )}
-                  {/* </div> */}
                 </CardContent>
               </Card>
             </AnimatedSection>
