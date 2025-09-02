@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useMobileNavigationCleanup } from "@/hooks/use-mobile-navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { SEOHead } from "@/components/seo-head";
@@ -28,8 +28,8 @@ import { Spinner } from "@/components/ui/spinner";
 const COMPONENT_KEY = `store-${Date.now()}`;
 
 export default function Store() {
-  // Navigation and lifecycle management
-  const [location, setLocation] = useLocation();
+  // Mobile-safe navigation and lifecycle management
+  const { safeNavigate, isNavigating, forceCleanup, isMounted } = useMobileNavigationCleanup();
   const isMountedRef = useRef(true);
   const cleanupRef = useRef<(() => void) | null>(null);
   
@@ -43,7 +43,6 @@ export default function Store() {
   const [cart, setCart] = useState<Array<{ product: Product; quantity: number }>>([]);
   
   // Component state tracking
-  const [isNavigating, setIsNavigating] = useState(false);
   const [componentMounted, setComponentMounted] = useState(false);
   
   const { toast } = useToast();
@@ -82,28 +81,18 @@ export default function Store() {
     }
   }, []);
 
-  // Navigation interceptor with proper state management
-  const handleNavigation = useCallback((href: string, event?: Event) => {
-    if (!isMountedRef.current) return;
+  // Mobile-safe navigation handler
+  const handleNavigation = useCallback((href: string) => {
+    if (!isMountedRef.current || isNavigating) return;
     
     try {
-      setIsNavigating(true);
       performCleanup();
-      
-      // Small delay to ensure state cleanup before navigation
-      const timeoutId = setTimeout(() => {
-        if (isMountedRef.current) {
-          setLocation(href);
-        }
-      }, 50);
-      
-      return () => clearTimeout(timeoutId);
+      safeNavigate(href);
     } catch (error) {
       console.error('Navigation error:', error);
-      // Fallback to immediate navigation
-      setLocation(href);
+      window.location.href = href; // Fallback
     }
-  }, [setLocation, performCleanup]);
+  }, [performCleanup, safeNavigate, isNavigating]);
 
   // Enhanced queries with proper error handling and mobile optimization
   const { data: config } = useQuery<SiteConfig>({
