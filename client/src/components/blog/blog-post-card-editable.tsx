@@ -65,7 +65,7 @@ export function BlogPostCardEditable({ post, onEdit, onDelete }: BlogPostCardEdi
               </Badge>
             )}
           </div>
-          
+
           {isSuperuser && (
             <div className="flex gap-1">
               <Button size="sm" variant="ghost" onClick={() => onEdit?.(post)}>
@@ -116,9 +116,12 @@ export function BlogPostCardEditable({ post, onEdit, onDelete }: BlogPostCardEdi
               maxLength={300}
             />
           ) : (
-            <p className="text-gray-600 leading-relaxed line-clamp-3">
-              {post.excerpt}
-            </p>
+            <div 
+          className="text-sm text-gray-600 mb-4 line-clamp-3"
+          dangerouslySetInnerHTML={{ 
+            __html: post.excerpt || post.content.substring(0, 150).replace(/<[^>]*>/g, '') 
+          }}
+        />
           )}
         </div>
 
@@ -163,7 +166,7 @@ export function BlogPostCardEditable({ post, onEdit, onDelete }: BlogPostCardEdi
               <span>{post.authorName  || 'Admin'}</span>
             </div>
           </div>
-          
+
           <Button size="sm" variant="outline" asChild>
             <Button size="sm" variant="outline" asChild>
               <Link href={`/blog/${post.slug}`}>

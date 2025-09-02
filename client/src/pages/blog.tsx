@@ -148,9 +148,12 @@ export default function Blog() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-gray-600 mb-4 line-clamp-3 text-sm break-word">
-                          {post.excerpt}
-                        </p>
+                        <div 
+                          className="text-gray-600 text-sm mb-4 line-clamp-3"
+                          dangerouslySetInnerHTML={{ 
+                            __html: post.excerpt || post.content.substring(0, 150).replace(/<[^>]*>/g, '') 
+                          }}
+                        />
                         <div className="flex items-center justify-between text-sm text-gray-500 flex-wrap gap-2">
                           <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap gap-2">
                             <div className="flex items-center space-x-1">
