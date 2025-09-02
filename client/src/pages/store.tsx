@@ -101,6 +101,8 @@ export default function Store() {
   };
 
   const openProductModal = (product: Product) => {
+    // Prevent opening modal if we're navigating
+    if (document.visibilityState === 'hidden') return;
     setSelectedProduct(product);
     setProductQuantity(1);
   };
@@ -133,8 +135,18 @@ export default function Store() {
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
-    localStorage.setItem('checkoutItems', JSON.stringify(cart));
-    setLocation("/checkout");
+    try {
+      localStorage.setItem('checkoutItems', JSON.stringify(cart));
+      setIsCartOpen(false); // Close cart before navigation
+      setTimeout(() => setLocation("/checkout"), 100); // Small delay to ensure state cleanup
+    } catch (error) {
+      console.error('Error saving cart to localStorage:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo procesar el carrito. Intenta de nuevo.",
+        variant: "destructive"
+      });
+    }
   };
 
   const removeFromCart = (productId: string) => {
@@ -157,6 +169,9 @@ export default function Store() {
       setSelectedProduct(null);
       setIsCartOpen(false);
       setProductQuantity(1);
+      setSearchTerm("");
+      setSelectedCategory("all");
+      setFavorites(new Set());
     };
   }, []);
 
@@ -169,6 +184,21 @@ export default function Store() {
       }
     }
   }, [products, categories]);
+
+  // Force component refresh when location changes
+  useEffect(() => {
+    const cleanup = () => {
+      setSelectedProduct(null);
+      setIsCartOpen(false);
+      setProductQuantity(1);
+    };
+    
+    window.addEventListener('popstate', cleanup);
+    return () => {
+      window.removeEventListener('popstate', cleanup);
+      cleanup();
+    };
+  }, []);
 
   // --- UI principal ---
   if (!isStoreEnabled) return (
@@ -204,6 +234,7 @@ export default function Store() {
 
   return (
     <div 
+      key="store-page"
       className="min-h-screen bg-background"
       style={{
         backgroundColor: appearance.backgroundColor || "inherit",

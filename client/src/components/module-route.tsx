@@ -1,34 +1,43 @@
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo } from "react";
 import { Route } from "wouter";
-import type { SiteConfig } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { LoadingPage } from "@/components/loading-page";
 import NotFound from "@/pages/not-found";
-import { LoadingPage } from "./loading-page";
+import type { SiteConfig } from "@shared/schema";
 
 interface ModuleRouteProps {
   path: string;
-  component: any;
+  component: React.ComponentType<any>;
   moduleKey: string;
 }
 
 export function ModuleRoute({ path, component: Component, moduleKey }: ModuleRouteProps) {
   const { data: config, isLoading } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
-    staleTime: 5 * 60 * 1000, // 5 minutes - same as Router
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
   });
 
-  const configData = config?.config as any;
-  const modules = configData?.frontpage?.modulos || {};
-  const isModuleActive = modules[moduleKey]?.activo;
-
-  // Show loading while config is being fetched
-  if (isLoading) {
-    return <Route path={path} component={LoadingPage} />;
-  }
+  const isModuleActive = useMemo(() => {
+    if (!config) return false;
+    const configData = config.config as any;
+    const modules = configData?.frontpage?.modulos || {};
+    return modules[moduleKey]?.activo;
+  }, [config, moduleKey]);
 
   return (
-    <Route 
-      path={path} 
-      component={isModuleActive ? Component : NotFound}
-    />
+    <Route path={path}>
+      {() => {
+        if (isLoading) {
+          return <LoadingPage />;
+        }
+
+        if (!isModuleActive) {
+          return <NotFound />;
+        }
+
+        return <Component key={`${moduleKey}-${path}`} />;
+      }}
+    </Route>
   );
 }

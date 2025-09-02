@@ -61,6 +61,8 @@ function Router() {
   const { data: config, isLoading } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches on mobile
+    retry: 1, // Reduce retry attempts
   });
 
   // Show loading while the main configuration loads
@@ -71,14 +73,14 @@ function Router() {
   return (
     <Switch>
       {/* Public routes */}
-      <Route path="/" component={Home} />
-      <ModuleRoute path="/testimonials" component={Testimonials} moduleKey="testimonios" />
-      <ModuleRoute path="/faqs" component={Faqs} moduleKey="faqs" />
-      <ModuleRoute path="/contact" component={Contact} moduleKey="contacto" />
-      <ModuleRoute path="/store" component={Store} moduleKey="tienda" />
-      <ModuleRoute path="/blog" component={Blog} moduleKey="blog" />
-      <Route path="/blog/:slug" component={BlogPost} />
-      <ModuleRoute path="/reservations" component={Reservations} moduleKey="reservas" />
+      <Route path="/" component={Home} key="home" />
+      <ModuleRoute path="/testimonials" component={Testimonials} moduleKey="testimonios" key="testimonials" />
+      <ModuleRoute path="/faqs" component={Faqs} moduleKey="faqs" key="faqs" />
+      <ModuleRoute path="/contact" component={Contact} moduleKey="contacto" key="contact" />
+      <ModuleRoute path="/store" component={Store} moduleKey="tienda" key="store" />
+      <ModuleRoute path="/blog" component={Blog} moduleKey="blog" key="blog" />
+      <Route path="/blog/:slug" component={BlogPost} key="blog-post" />
+      <ModuleRoute path="/reservations" component={Reservations} moduleKey="reservas" key="reservations" />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/create-admin" component={CreateAdmin} />

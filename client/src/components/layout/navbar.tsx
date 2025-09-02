@@ -96,6 +96,14 @@ export function Navbar() {
                       ? "text-primary"
                       : "text-gray-700"
                   }`}
+                  onClick={() => {
+                    // Force page refresh on navigation to clear any lingering state
+                    setTimeout(() => {
+                      if (window.location.pathname !== item.href) {
+                        window.location.href = item.href;
+                      }
+                    }, 100);
+                  }}
                 >
                   {item.label}
                 </Link>
