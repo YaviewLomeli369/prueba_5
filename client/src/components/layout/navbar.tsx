@@ -23,7 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ShoppingCart, User, LogOut, Settings, Menu, X } from "lucide-react";
+import { ShoppingCart, User, LogOut, Settings, Menu, X, Store, MessageCircle } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 
 export function Navbar() {
@@ -270,7 +270,7 @@ export function Navbar() {
                         <div className="p-2 bg-gray-50 rounded-md">
                           <p className="font-medium">{user?.username}</p>
                           <p className="text-sm text-gray-600">{user?.email}</p>
-                          <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
                         </div>
                         <NavLink
                           href="/profile"
