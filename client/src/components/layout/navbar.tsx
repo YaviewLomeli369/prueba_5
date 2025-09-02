@@ -31,6 +31,7 @@ export function Navbar() {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1075);
   const navRef = useRef(`navbar-${Date.now()}`);
   const isNavigatingRef = useRef(false);
 
@@ -96,14 +97,29 @@ export function Navbar() {
     }
   }, [location, setLocation]);
 
-  // Mobile menu cleanup on unmount
+  // Mobile menu cleanup on unmount and window resize handler
   useEffect(() => {
+    const handleResize = () => {
+      const windowWidth = window.innerWidth;
+      const newIsDesktop = windowWidth > 1075;
+      
+      setIsDesktop(newIsDesktop);
+      
+      // Close mobile menu if window becomes wider than 1075px
+      if (newIsDesktop && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    
     return () => {
+      window.removeEventListener('resize', handleResize);
       setIsMobileMenuOpen(false);
       document.body.classList.remove('modal-open', 'overflow-hidden');
       document.body.style.overflow = '';
     };
-  }, []);
+  }, [isMobileMenuOpen]);
 
   // Enhanced link component with proper event handling
   const NavLink = useCallback(({ href, children, className, onClick }: {
@@ -149,8 +165,8 @@ export function Navbar() {
               </span>
             </NavLink>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-6">
+            {/* Desktop Navigation - Show when screen width > 1075px */}
+            <div className={`items-center space-x-6 ${isDesktop ? 'flex' : 'hidden'}`}>
               {navItems.map((item) => (
                 <NavLink
                   key={`${item.href}-${navRef.current}`}
@@ -177,8 +193,8 @@ export function Navbar() {
               </NavLink>
             )}
 
-            {/* Desktop Auth */}
-            <div className="hidden sm:flex items-center space-x-2">
+            {/* Desktop Auth - Show when screen width > 1075px */}
+            <div className={`items-center space-x-2 ${isDesktop ? 'flex' : 'hidden'}`}>
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -234,21 +250,21 @@ export function Navbar() {
               )}
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile Menu - Show when screen width <= 1075px */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden">
+                <Button variant="ghost" size="sm" className={isDesktop ? 'hidden' : 'block'}>
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <SheetHeader>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] flex flex-col">
+                <SheetHeader className="flex-shrink-0">
                   <SheetTitle className="text-left">Navegación</SheetTitle>
                   <SheetDescription className="text-left">
                     {appearance.brandName || "Sistema Modular"}
                   </SheetDescription>
                 </SheetHeader>
-                <div className="flex flex-col space-y-4 mt-6">
+                <div className="flex flex-col space-y-4 mt-6 overflow-y-auto flex-1 touch-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
                   {/* Navigation Links */}
                   {navItems.map((item) => (
                     <NavLink
