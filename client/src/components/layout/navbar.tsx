@@ -1,3 +1,4 @@
+
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -7,8 +8,6 @@ import type { SiteConfig } from "@shared/schema";
 // Logo en imgs
 import logoSvg from "/imgs/nova_logos_v_1.svg";
 import logoSvg2 from "/imgs/nova_logos_v_2.svg";
-
-
 
 import {
   DropdownMenu,
@@ -26,15 +25,19 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ShoppingCart, User, LogOut, Settings, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 export function Navbar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navRef = useRef(`navbar-${Date.now()}`);
+  const isNavigatingRef = useRef(false);
 
   const { data: config } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const configData = config?.config as any;
@@ -53,26 +56,84 @@ export function Navbar() {
     { href: "/servicios", label: "Servicios", always: true }
   ].filter(item => item.always || (item.moduleKey && modules[item.moduleKey]?.activo));
 
+  // Enhanced navigation handler with proper cleanup
+  const handleNavigation = useCallback((href: string, closeMenu = true) => {
+    if (isNavigatingRef.current) return;
+    
+    try {
+      isNavigatingRef.current = true;
+      
+      // Close mobile menu immediately
+      if (closeMenu) {
+        setIsMobileMenuOpen(false);
+      }
+      
+      // Clear any modal states before navigation
+      document.body.classList.remove('modal-open', 'overflow-hidden');
+      document.body.style.overflow = '';
+      
+      // Handle navigation
+      if (href === location) {
+        // If same route, force refresh by adding timestamp
+        const refreshHref = `${href}?refresh=${Date.now()}`;
+        window.history.replaceState(null, '', href); // Clean URL
+        setLocation(refreshHref);
+        setTimeout(() => setLocation(href), 50);
+      } else {
+        setLocation(href);
+      }
+      
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback to direct navigation
+      window.location.href = href;
+    } finally {
+      // Reset navigation flag after a delay
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 300);
+    }
+  }, [location, setLocation]);
+
+  // Mobile menu cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setIsMobileMenuOpen(false);
+      document.body.classList.remove('modal-open', 'overflow-hidden');
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  // Enhanced link component with proper event handling
+  const NavLink = useCallback(({ href, children, className, onClick }: {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+    onClick?: () => void;
+  }) => (
+    <button
+      className={className}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onClick) onClick();
+        handleNavigation(href);
+      }}
+      disabled={isNavigatingRef.current}
+    >
+      {children}
+    </button>
+  ), [handleNavigation]);
+
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50" 
-      //{/* style={{
-        //backgroundColor: '#9bfcff',
-      //}} */}
-        
-      >
+    <nav 
+      className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50" 
+      key={navRef.current}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <Link href="/" className="flex items-center space-x-2">
-              {/* <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">Fssitle
-                {appearance.logoUrl ? (
-                  <img src={appearance.logoUrl} alt="Logo" className="w-6 h-6 object-contain" />
-                ) : (
-                  <span className="text-white font-bold text-sm">
-                    {appearance.brandName?.charAt(0) || "S"}
-                  </span>
-                )}
-              </div> */}
+            <NavLink href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center">
                 {appearance.logoUrl ? (
                   <img src={logoSvg} alt="Logo" className="w-6 h-6 object-contain" />
@@ -82,31 +143,25 @@ export function Navbar() {
                   </span>
                 )}
               </div>
-              <span className="hidden sm:block text-xl font-semibold text-gray-900">{appearance.brandName || "Sistema Modular"}</span>
-            </Link>
+              <span className="hidden sm:block text-xl font-semibold text-gray-900">
+                {appearance.brandName || "Sistema Modular"}
+              </span>
+            </NavLink>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
               {navItems.map((item) => (
-                <Link
-                  key={item.href}
+                <NavLink
+                  key={`${item.href}-${navRef.current}`}
                   href={item.href}
                   className={`text-sm font-medium transition-colors hover:text-primary ${
                     location === item.href
                       ? "text-primary"
                       : "text-gray-700"
                   }`}
-                  onClick={() => {
-                    // Force page refresh on navigation to clear any lingering state
-                    setTimeout(() => {
-                      if (window.location.pathname !== item.href) {
-                        window.location.href = item.href;
-                      }
-                    }, 100);
-                  }}
                 >
                   {item.label}
-                </Link>
+                </NavLink>
               ))}
             </div>
           </div>
@@ -114,11 +169,11 @@ export function Navbar() {
           <div className="flex items-center space-x-2">
             {/* Shopping Cart - Only show if store module is active */}
             {modules.tienda?.activo && (
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/store">
+              <NavLink href="/store">
+                <Button variant="ghost" size="sm" className="pointer-events-none">
                   <ShoppingCart className="h-4 w-4" />
-                </Link>
-              </Button>
+                </Button>
+              </NavLink>
             )}
 
             {/* Desktop Auth */}
@@ -146,18 +201,14 @@ export function Navbar() {
                         </p>
                       </div>
                     </div>
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Perfil</span>
-                      </Link>
+                    <DropdownMenuItem onClick={() => handleNavigation("/profile")}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Perfil</span>
                     </DropdownMenuItem>
                     {user?.role === "admin" || user?.role === "superuser" ? (
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin">
-                          <Settings className="mr-2 h-4 w-4" />
-                          <span>Administración</span>
-                        </Link>
+                      <DropdownMenuItem onClick={() => handleNavigation("/admin")}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Administración</span>
                       </DropdownMenuItem>
                     ) : null}
                     <DropdownMenuItem onClick={() => logout()}>
@@ -168,12 +219,16 @@ export function Navbar() {
                 </DropdownMenu>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/login">Iniciar Sesión</Link>
-                  </Button>
-                  <Button size="sm" asChild>
-                    <Link href="/register">Registrarse</Link>
-                  </Button>
+                  <NavLink href="/login">
+                    <Button variant="ghost" size="sm" className="pointer-events-none">
+                      Iniciar Sesión
+                    </Button>
+                  </NavLink>
+                  <NavLink href="/register">
+                    <Button size="sm" className="pointer-events-none">
+                      Registrarse
+                    </Button>
+                  </NavLink>
                 </>
               )}
             </div>
@@ -195,8 +250,8 @@ export function Navbar() {
                 <div className="flex flex-col space-y-4 mt-6">
                   {/* Navigation Links */}
                   {navItems.map((item) => (
-                    <Link
-                      key={item.href}
+                    <NavLink
+                      key={`mobile-${item.href}-${navRef.current}`}
                       href={item.href}
                       className={`text-lg font-medium transition-colors hover:text-primary p-2 rounded-md ${
                         location === item.href
@@ -206,7 +261,7 @@ export function Navbar() {
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       {item.label}
-                    </Link>
+                    </NavLink>
                   ))}
                   
                   <div className="border-t pt-4">
@@ -217,23 +272,23 @@ export function Navbar() {
                           <p className="text-sm text-gray-600">{user?.email}</p>
                           <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
                         </div>
-                        <Link
+                        <NavLink
                           href="/profile"
                           className="flex items-center space-x-2 text-gray-700 hover:text-primary p-2 rounded-md"
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           <User className="h-4 w-4" />
                           <span>Perfil</span>
-                        </Link>
+                        </NavLink>
                         {user?.role === "admin" || user?.role === "superuser" ? (
-                          <Link
+                          <NavLink
                             href="/admin"
                             className="flex items-center space-x-2 text-gray-700 hover:text-primary p-2 rounded-md"
                             onClick={() => setIsMobileMenuOpen(false)}
                           >
                             <Settings className="h-4 w-4" />
                             <span>Administración</span>
-                          </Link>
+                          </NavLink>
                         ) : null}
                         <button
                           onClick={() => {
@@ -248,20 +303,20 @@ export function Navbar() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Link
+                        <NavLink
                           href="/login"
                           className="block w-full text-center py-2 px-4 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           Iniciar Sesión
-                        </Link>
-                        <Link
+                        </NavLink>
+                        <NavLink
                           href="/register"
                           className="block w-full text-center py-2 px-4 bg-primary text-white rounded-md hover:bg-primary/90"
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           Registrarse
-                        </Link>
+                        </NavLink>
                       </div>
                     )}
                   </div>

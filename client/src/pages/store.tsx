@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Navbar } from "@/components/layout/navbar";
@@ -23,8 +24,16 @@ import { useToast } from "@/hooks/use-toast";
 import AnimatedSection from "@/components/AnimatedSection";
 import { Spinner } from "@/components/ui/spinner";
 
+// Generate unique component key to force clean re-renders
+const COMPONENT_KEY = `store-${Date.now()}`;
+
 export default function Store() {
-  // --- Estados ---
+  // Navigation and lifecycle management
+  const [location, setLocation] = useLocation();
+  const isMountedRef = useRef(true);
+  const cleanupRef = useRef<(() => void) | null>(null);
+  
+  // Core states with proper initialization
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -32,28 +41,108 @@ export default function Store() {
   const [productQuantity, setProductQuantity] = useState(1);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [cart, setCart] = useState<Array<{ product: Product; quantity: number }>>([]);
+  
+  // Component state tracking
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [componentMounted, setComponentMounted] = useState(false);
+  
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
-  // --- Consultas ---
+  // Comprehensive cleanup function
+  const performCleanup = useCallback(() => {
+    if (!isMountedRef.current) return;
+    
+    try {
+      // Reset all local states
+      setSelectedCategory("all");
+      setSearchTerm("");
+      setIsCartOpen(false);
+      setSelectedProduct(null);
+      setProductQuantity(1);
+      setFavorites(new Set());
+      setIsNavigating(false);
+      
+      // Clear any pending timeouts or intervals
+      const highestTimeoutId = setTimeout(() => {}, 0);
+      for (let i = 0; i < highestTimeoutId; i++) {
+        clearTimeout(i);
+      }
+      
+      // Force close any open dialogs by dispatching escape
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' });
+      document.dispatchEvent(escapeEvent);
+      
+      // Clear any body classes that might have been added by modals
+      document.body.classList.remove('modal-open', 'overflow-hidden');
+      document.body.style.overflow = '';
+      
+    } catch (error) {
+      console.warn('Cleanup error:', error);
+    }
+  }, []);
+
+  // Navigation interceptor with proper state management
+  const handleNavigation = useCallback((href: string, event?: Event) => {
+    if (!isMountedRef.current) return;
+    
+    try {
+      setIsNavigating(true);
+      performCleanup();
+      
+      // Small delay to ensure state cleanup before navigation
+      const timeoutId = setTimeout(() => {
+        if (isMountedRef.current) {
+          setLocation(href);
+        }
+      }, 50);
+      
+      return () => clearTimeout(timeoutId);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback to immediate navigation
+      setLocation(href);
+    }
+  }, [setLocation, performCleanup]);
+
+  // Enhanced queries with proper error handling and mobile optimization
   const { data: config } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+    enabled: componentMounted && !isNavigating,
   });
 
-  const { data: products, isLoading } = useQuery<Product[]>({
+  const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["/api/store/products"],
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+    enabled: componentMounted && !isNavigating,
   });
 
   const { data: categories } = useQuery<ProductCategory[]>({
     queryKey: ["/api/store/categories"],
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+    enabled: componentMounted && !isNavigating,
   });
 
-  // --- Mutación carrito ---
+  // Enhanced cart mutation with proper error handling
   const addToCartMutation = useMutation({
     mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
+      if (!isMountedRef.current || isNavigating) {
+        throw new Error("Component unmounted or navigating");
+      }
+      
       const product = products?.find(p => p.id === productId);
       if (!product) throw new Error("Producto no encontrado");
+      
       setCart(prev => {
         const existing = prev.find(item => item.product.id === productId);
         if (existing) {
@@ -68,20 +157,55 @@ export default function Store() {
       return product;
     },
     onSuccess: (product) => {
-      toast({
-        title: "Producto agregado",
-        description: `${product.name} fue agregado al carrito.`,
-      });
+      if (isMountedRef.current && !isNavigating) {
+        toast({
+          title: "Producto agregado",
+          description: `${product.name} fue agregado al carrito.`,
+        });
+      }
     },
+    onError: (error) => {
+      if (isMountedRef.current && !isNavigating) {
+        console.error('Cart error:', error);
+      }
+    }
   });
 
-  // --- Configuración tienda ---
-  const configData = config?.config as any;
-  const modules = configData?.frontpage?.modulos || {};
-  const isStoreEnabled = modules.tienda?.activo;
+  // Store configuration with safe access
+  const storeConfig = useMemo(() => {
+    if (!config) return { isStoreEnabled: false, appearance: {} };
+    
+    const configData = config?.config as any;
+    const modules = configData?.frontpage?.modulos || {};
+    const appearance = configData?.appearance || {};
+    
+    return {
+      isStoreEnabled: modules.tienda?.activo,
+      appearance,
+      modules
+    };
+  }, [config]);
 
-  // --- Helpers ---
-  const toggleFavorite = (productId: string) => {
+  // Enhanced product filtering with performance optimization
+  const filteredProducts = useMemo(() => {
+    if (!products || isNavigating) return [];
+    
+    return products.filter(p => {
+      if (!p.isActive) return false;
+      const matchesCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
+      const matchesSearch =
+        searchTerm === "" ||
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.tags && p.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
+      return matchesCategory && matchesSearch;
+    });
+  }, [products, selectedCategory, searchTerm, isNavigating]);
+
+  // Enhanced helper functions with safety checks
+  const toggleFavorite = useCallback((productId: string) => {
+    if (!isMountedRef.current || isNavigating) return;
+    
     setFavorites(prev => {
       const newFavorites = new Set(prev);
       if (newFavorites.has(productId)) {
@@ -93,67 +217,61 @@ export default function Store() {
       }
       return newFavorites;
     });
-  };
+  }, [toast, isNavigating]);
 
-  const getCategoryName = (categoryId: string) => {
+  const getCategoryName = useCallback((categoryId: string) => {
     if (categoryId === "all") return "Todas las categorías";
     return categories?.find(cat => cat.id === categoryId)?.name || categoryId;
-  };
+  }, [categories]);
 
-  const openProductModal = (product: Product) => {
-    // Prevent opening modal if we're navigating
-    if (document.visibilityState === 'hidden') return;
+  const openProductModal = useCallback((product: Product) => {
+    if (!isMountedRef.current || isNavigating || document.visibilityState === 'hidden') return;
+    
     setSelectedProduct(product);
     setProductQuantity(1);
-  };
+  }, [isNavigating]);
 
-  const addToCartFromModal = () => {
-    if (selectedProduct) {
-      addToCartMutation.mutate({ productId: selectedProduct.id, quantity: productQuantity });
-      setSelectedProduct(null);
-      setProductQuantity(1);
-    }
-  };
+  const addToCartFromModal = useCallback(() => {
+    if (!selectedProduct || !isMountedRef.current || isNavigating) return;
+    
+    addToCartMutation.mutate({ productId: selectedProduct.id, quantity: productQuantity });
+    setSelectedProduct(null);
+    setProductQuantity(1);
+  }, [selectedProduct, productQuantity, addToCartMutation, isNavigating]);
 
-  const availableCategories = ["all", ...(categories?.map(cat => cat.id) || [])];
+  const cartTotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + ((item.product.price / 100) * item.quantity), 0);
+  }, [cart]);
 
-  // --- Filtrado de productos con useMemo para optimización ---
-  const filteredProducts = useMemo(() => {
-    return products?.filter(p => {
-      if (!p.isActive) return false;
-      const matchesCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
-      const matchesSearch =
-        searchTerm === "" ||
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.tags && p.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
-      return matchesCategory && matchesSearch;
-    }) || [];
-  }, [products, selectedCategory, searchTerm]);
-
-  const cartTotal = cart.reduce((sum, item) => sum + ((item.product.price / 100) * item.quantity), 0);
-
-  const handleCheckout = () => {
-    if (cart.length === 0) return;
+  const handleCheckout = useCallback(() => {
+    if (cart.length === 0 || !isMountedRef.current || isNavigating) return;
+    
     try {
       localStorage.setItem('checkoutItems', JSON.stringify(cart));
-      setIsCartOpen(false); // Close cart before navigation
-      setTimeout(() => setLocation("/checkout"), 100); // Small delay to ensure state cleanup
+      setIsCartOpen(false);
+      
+      // Use navigation handler for consistent behavior
+      handleNavigation("/checkout");
     } catch (error) {
-      console.error('Error saving cart to localStorage:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo procesar el carrito. Intenta de nuevo.",
-        variant: "destructive"
-      });
+      console.error('Checkout error:', error);
+      if (isMountedRef.current) {
+        toast({
+          title: "Error",
+          description: "No se pudo procesar el carrito. Intenta de nuevo.",
+          variant: "destructive"
+        });
+      }
     }
-  };
+  }, [cart, handleNavigation, toast, isNavigating]);
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = useCallback((productId: string) => {
+    if (!isMountedRef.current || isNavigating) return;
     setCart(prev => prev.filter(item => item.product.id !== productId));
-  };
+  }, [isNavigating]);
 
-  const updateCartQuantity = (productId: string, newQuantity: number) => {
+  const updateCartQuantity = useCallback((productId: string, newQuantity: number) => {
+    if (!isMountedRef.current || isNavigating) return;
+    
     if (newQuantity <= 0) {
       removeFromCart(productId);
       return;
@@ -161,80 +279,116 @@ export default function Store() {
     setCart(prev => prev.map(item =>
       item.product.id === productId ? { ...item, quantity: newQuantity } : item
     ));
-  };
+  }, [removeFromCart, isNavigating]);
 
-  // Reset states when component unmounts (navigation away)
+  // Component lifecycle management
   useEffect(() => {
+    isMountedRef.current = true;
+    setComponentMounted(true);
+    
+    // Register cleanup function
+    cleanupRef.current = performCleanup;
+    
     return () => {
-      setSelectedProduct(null);
-      setIsCartOpen(false);
-      setProductQuantity(1);
-      setSearchTerm("");
-      setSelectedCategory("all");
-      setFavorites(new Set());
+      isMountedRef.current = false;
+      performCleanup();
     };
-  }, []);
+  }, [performCleanup]);
 
-  // Reset search and filters when products change
+  // Navigation event listeners with comprehensive cleanup
   useEffect(() => {
-    if (products && products.length > 0) {
-      const validCategories = categories?.map(cat => cat.id) || [];
+    const handlePopState = () => {
+      if (isMountedRef.current) {
+        performCleanup();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      performCleanup();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && isMountedRef.current) {
+        performCleanup();
+      }
+    };
+
+    // Enhanced navigation detection
+    const handleLocationChange = () => {
+      if (isMountedRef.current && location !== '/store') {
+        performCleanup();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Wouter-specific navigation detection
+    const checkLocationChange = setInterval(handleLocationChange, 100);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(checkLocationChange);
+    };
+  }, [location, performCleanup]);
+
+  // Category validation with proper loading states
+  useEffect(() => {
+    if (products && categories && componentMounted) {
+      const validCategories = categories.map(cat => cat.id);
       if (!validCategories.includes(selectedCategory) && selectedCategory !== "all") {
         setSelectedCategory("all");
       }
     }
-  }, [products, categories]);
+  }, [products, categories, selectedCategory, componentMounted]);
 
-  // Force component refresh when location changes
-  useEffect(() => {
-    const cleanup = () => {
-      setSelectedProduct(null);
-      setIsCartOpen(false);
-      setProductQuantity(1);
-    };
-    
-    window.addEventListener('popstate', cleanup);
-    return () => {
-      window.removeEventListener('popstate', cleanup);
-      cleanup();
-    };
-  }, []);
-
-  // --- UI principal ---
-  if (!isStoreEnabled) return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <AnimatedSection>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-4xl font-bold mb-4">Tienda</h1>
-          <p className="text-xl text-muted-foreground">La tienda no está disponible en este momento.</p>
-        </div>
-      </AnimatedSection>
-      <Footer />
-    </div>
-  );
-
-  if (isLoading) return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <AnimatedSection>
-        <div className="container mx-auto px-4 py-16 flex flex-col items-center space-y-4">
-          <Spinner size="lg" className="text-primary" />
-          <div className="text-center">
-            <h2 className="text-lg font-semibold text-foreground">Cargando productos...</h2>
-            <p className="text-sm text-muted-foreground">Por favor espere mientras cargamos la tienda.</p>
+  // Loading states with proper error handling
+  if (!componentMounted || productsLoading || !storeConfig) {
+    return (
+      <div key={`${COMPONENT_KEY}-loading`} className="min-h-screen bg-background">
+        <Navbar />
+        <AnimatedSection>
+          <div className="container mx-auto px-4 py-16 flex flex-col items-center space-y-4">
+            <Spinner size="lg" className="text-primary" />
+            <div className="text-center">
+              <h2 className="text-lg font-semibold text-foreground">Cargando tienda...</h2>
+              <p className="text-sm text-muted-foreground">Por favor espere mientras cargamos los productos.</p>
+            </div>
           </div>
-        </div>
-      </AnimatedSection>
-      <Footer />
-    </div>
-  );
+        </AnimatedSection>
+        <Footer />
+      </div>
+    );
+  }
 
-  const appearance = configData?.appearance || {};
+  // Module disabled state
+  if (!storeConfig.isStoreEnabled) {
+    return (
+      <div key={`${COMPONENT_KEY}-disabled`} className="min-h-screen bg-background">
+        <Navbar />
+        <AnimatedSection>
+          <div className="container mx-auto px-4 py-16 text-center">
+            <h1 className="text-4xl font-bold mb-4">Tienda</h1>
+            <p className="text-xl text-muted-foreground">La tienda no está disponible en este momento.</p>
+          </div>
+        </AnimatedSection>
+        <Footer />
+      </div>
+    );
+  }
+
+  const { appearance } = storeConfig;
+  const availableCategories = useMemo(() => 
+    ["all", ...(categories?.map(cat => cat.id) || [])], 
+    [categories]
+  );
 
   return (
     <div 
-      key="store-page"
+      key={`${COMPONENT_KEY}-main`}
       className="min-h-screen bg-background"
       style={{
         backgroundColor: appearance.backgroundColor || "inherit",
@@ -255,9 +409,11 @@ export default function Store() {
             </div>
 
             {/* Botón Carrito */}
-            <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
+            <Dialog open={isCartOpen && !isNavigating} onOpenChange={(open) => {
+              if (!isNavigating) setIsCartOpen(open);
+            }}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2" disabled={isNavigating}>
                   <ShoppingCart className="h-4 w-4" /> Carrito ({cart.length})
                 </Button>
               </DialogTrigger>
@@ -277,14 +433,14 @@ export default function Store() {
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}>
+                            <Button variant="outline" size="sm" onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)} disabled={isNavigating}>
                               <Minus className="h-3 w-3" />
                             </Button>
                             <span className="w-8 text-center">{item.quantity}</span>
-                            <Button variant="outline" size="sm" onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}>
+                            <Button variant="outline" size="sm" onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)} disabled={isNavigating}>
                               <Plus className="h-3 w-3" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.product.id)}>
+                            <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.product.id)} disabled={isNavigating}>
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
@@ -298,7 +454,9 @@ export default function Store() {
                           <span className="font-semibold">Total:</span>
                           <span className="font-bold text-lg">${cartTotal.toFixed(2)}</span>
                         </div>
-                        <Button className="w-full" onClick={handleCheckout}>Proceder al Checkout</Button>
+                        <Button className="w-full" onClick={handleCheckout} disabled={isNavigating}>
+                          Proceder al Checkout
+                        </Button>
                       </div>
                     </>
                   )}
@@ -314,12 +472,13 @@ export default function Store() {
               <Input
                 placeholder="Buscar productos..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => !isNavigating && setSearchTerm(e.target.value)}
                 className="pl-10"
+                disabled={isNavigating}
               />
             </div>
 
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select value={selectedCategory} onValueChange={(value) => !isNavigating && setSelectedCategory(value)} disabled={isNavigating}>
               <SelectTrigger className="w-[200px]"><SelectValue placeholder="Categoría" /></SelectTrigger>
               <SelectContent>
                 {availableCategories.map(catId => (
@@ -334,10 +493,10 @@ export default function Store() {
         <AnimatedSection delay={0.4}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product, index) => (
-              <AnimatedSection key={product.id} delay={0.1 * (index % 8)}>
+              <AnimatedSection key={`${product.id}-${COMPONENT_KEY}`} delay={0.1 * (index % 8)}>
                 <Card
                   className="h-full overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer"
-                  onClick={() => openProductModal(product)}
+                  onClick={() => !isNavigating && openProductModal(product)}
                 >
                   <div className="relative">
                     {product.images?.[0] && (
@@ -362,7 +521,11 @@ export default function Store() {
                         variant="ghost"
                         size="sm"
                         className="shrink-0 p-1"
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          !isNavigating && toggleFavorite(product.id); 
+                        }}
+                        disabled={isNavigating}
                       >
                         <Heart className={`h-4 w-4 ${favorites.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
                       </Button>
@@ -377,8 +540,11 @@ export default function Store() {
                     <div className="flex items-center justify-between mt-auto">
                       <span className="text-2xl font-bold text-primary">${(product.price / 100).toFixed(2)}</span>
                       <Button
-                        onClick={(e) => { e.stopPropagation(); addToCartMutation.mutate({ productId: product.id }); }}
-                        disabled={(product.stock !== null && product.stock === 0) || addToCartMutation.isPending}
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          !isNavigating && addToCartMutation.mutate({ productId: product.id }); 
+                        }}
+                        disabled={(product.stock !== null && product.stock === 0) || addToCartMutation.isPending || isNavigating}
                         className="gap-2"
                       >
                         <ShoppingCart className="h-4 w-4" /> Agregar
@@ -393,9 +559,9 @@ export default function Store() {
 
         {/* Modal Producto */}
         <Dialog 
-          open={!!selectedProduct} 
+          open={!!selectedProduct && !isNavigating} 
           onOpenChange={(open) => {
-            if (!open) {
+            if (!open && !isNavigating) {
               setSelectedProduct(null);
               setProductQuantity(1);
             }
@@ -427,20 +593,31 @@ export default function Store() {
                   {/* Cantidad y agregar */}
                   <div className="flex items-center gap-4 mt-4">
                     <div className="flex items-center border rounded-md">
-                      <Button variant="ghost" size="sm" onClick={() => setProductQuantity(Math.max(1, productQuantity - 1))}><Minus className="h-4 w-4" /></Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => !isNavigating && setProductQuantity(Math.max(1, productQuantity - 1))}
+                        disabled={isNavigating}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
                       <span className="px-4 py-2 border-x">{productQuantity}</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() =>
+                        onClick={() => !isNavigating &&
                           setProductQuantity(selectedProduct.stock !== null ? Math.min(productQuantity + 1, selectedProduct.stock) : productQuantity + 1)
                         }
-                        disabled={selectedProduct.stock !== null && productQuantity >= selectedProduct.stock}
+                        disabled={isNavigating || (selectedProduct.stock !== null && productQuantity >= selectedProduct.stock)}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Button onClick={addToCartFromModal} className="flex-1" disabled={(selectedProduct.stock !== null && selectedProduct.stock === 0) || addToCartMutation.isPending}>
+                    <Button 
+                      onClick={addToCartFromModal} 
+                      className="flex-1" 
+                      disabled={(selectedProduct.stock !== null && selectedProduct.stock === 0) || addToCartMutation.isPending || isNavigating}
+                    >
                       <ShoppingCart className="h-4 w-4 mr-2" /> Agregar al carrito
                     </Button>
                   </div>
@@ -450,7 +627,7 @@ export default function Store() {
           </DialogContent>
         </Dialog>
 
-        {filteredProducts.length === 0 && (
+        {filteredProducts.length === 0 && !isNavigating && (
           <AnimatedSection delay={0.2}>
             <div className="text-center py-12">
               <div className="text-6xl mb-4">🛒</div>
@@ -459,7 +636,17 @@ export default function Store() {
                 {searchTerm || selectedCategory !== "all" ? "No se encontraron productos que coincidan con los filtros." : "Actualmente no tenemos productos en stock."}
               </p>
               {(searchTerm || selectedCategory !== "all") && (
-                <Button variant="outline" className="mt-4" onClick={() => { setSearchTerm(""); setSelectedCategory("all"); }}>
+                <Button 
+                  variant="outline" 
+                  className="mt-4" 
+                  onClick={() => {
+                    if (!isNavigating) {
+                      setSearchTerm(""); 
+                      setSelectedCategory("all");
+                    }
+                  }}
+                  disabled={isNavigating}
+                >
                   Limpiar filtros
                 </Button>
               )}

@@ -1,3 +1,4 @@
+
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { InlineEditor } from "@/components/inline-editor/InlineEditor";
@@ -8,6 +9,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { ModuleRoute } from "@/components/module-route";
 import { LoadingPage } from "@/components/loading-page";
 import type { SiteConfig } from "@shared/schema";
+import { useEffect, useRef } from "react";
 
 // Public pages
 import Home from "@/pages/home";
@@ -54,6 +56,8 @@ import WhatsAppWidget from "@/components/WhatsAppWidget";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  const appKeyRef = useRef(`app-${Date.now()}`);
+  
   // Apply theme dynamically
   useTheme();
   
@@ -65,71 +69,106 @@ function Router() {
     retry: 1, // Reduce retry attempts
   });
 
+  // Enhanced navigation cleanup for mobile
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Clear any pending states when page becomes hidden
+        document.body.classList.remove('modal-open', 'overflow-hidden');
+        document.body.style.overflow = '';
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      // Final cleanup before page unload
+      document.body.style.overflow = '';
+      sessionStorage.removeItem('navigationState');
+    };
+
+    const handleTouchStart = () => {
+      // Ensure touch events work properly on mobile
+      document.body.style.touchAction = 'auto';
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, []);
+
   // Show loading while the main configuration loads
   if (isLoading) {
-    return <LoadingPage />;
+    return <LoadingPage key={`${appKeyRef.current}-loading`} />;
   }
   
   return (
-    <Switch>
-      {/* Public routes */}
-      <Route path="/" component={Home} key="home" />
-      <ModuleRoute path="/testimonials" component={Testimonials} moduleKey="testimonios" key="testimonials" />
-      <ModuleRoute path="/faqs" component={Faqs} moduleKey="faqs" key="faqs" />
-      <ModuleRoute path="/contact" component={Contact} moduleKey="contacto" key="contact" />
-      <ModuleRoute path="/store" component={Store} moduleKey="tienda" key="store" />
-      <ModuleRoute path="/blog" component={Blog} moduleKey="blog" key="blog" />
-      <Route path="/blog/:slug" component={BlogPost} key="blog-post" />
-      <ModuleRoute path="/reservations" component={Reservations} moduleKey="reservas" key="reservations" />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/create-admin" component={CreateAdmin} />
-      <Route path="/setup" component={Setup} />
-      <Route path="/profile" component={Profile} />
-      <Route path="/shipping-info" component={ShippingInfo} />
-      <Route path="/checkout" component={Checkout} />
-      <Route path="/checkout/success" component={CheckoutSuccess} />
-      <Route path="/track-order" component={OrderTracking} />
-      <Route path="/aviso-privacidad" component={AvisoPrivacidad} />
-      <Route path="/conocenos" component={Conocenos} />
-      <Route path="/servicios" component={Servicios} />
+    <Switch key={`${appKeyRef.current}-switch`}>
+      {/* Public routes with unique keys for proper re-rendering */}
+      <Route path="/" component={() => <Home key={`home-${Date.now()}`} />} />
+      <ModuleRoute path="/testimonials" component={() => <Testimonials key={`testimonials-${Date.now()}`} />} moduleKey="testimonios" />
+      <ModuleRoute path="/faqs" component={() => <Faqs key={`faqs-${Date.now()}`} />} moduleKey="faqs" />
+      <ModuleRoute path="/contact" component={() => <Contact key={`contact-${Date.now()}`} />} moduleKey="contacto" />
+      <ModuleRoute path="/store" component={() => <Store key={`store-${Date.now()}`} />} moduleKey="tienda" />
+      <ModuleRoute path="/blog" component={() => <Blog key={`blog-${Date.now()}`} />} moduleKey="blog" />
+      <Route path="/blog/:slug" component={(params) => <BlogPost key={`blog-post-${params.slug}-${Date.now()}`} />} />
+      <ModuleRoute path="/reservations" component={() => <Reservations key={`reservations-${Date.now()}`} />} moduleKey="reservas" />
+      <Route path="/login" component={() => <Login key={`login-${Date.now()}`} />} />
+      <Route path="/register" component={() => <Register key={`register-${Date.now()}`} />} />
+      <Route path="/create-admin" component={() => <CreateAdmin key={`create-admin-${Date.now()}`} />} />
+      <Route path="/setup" component={() => <Setup key={`setup-${Date.now()}`} />} />
+      <Route path="/profile" component={() => <Profile key={`profile-${Date.now()}`} />} />
+      <Route path="/shipping-info" component={() => <ShippingInfo key={`shipping-info-${Date.now()}`} />} />
+      <Route path="/checkout" component={() => <Checkout key={`checkout-${Date.now()}`} />} />
+      <Route path="/checkout/success" component={() => <CheckoutSuccess key={`checkout-success-${Date.now()}`} />} />
+      <Route path="/track-order" component={() => <OrderTracking key={`order-tracking-${Date.now()}`} />} />
+      <Route path="/aviso-privacidad" component={() => <AvisoPrivacidad key={`aviso-privacidad-${Date.now()}`} />} />
+      <Route path="/conocenos" component={() => <Conocenos key={`conocenos-${Date.now()}`} />} />
+      <Route path="/servicios" component={() => <Servicios key={`servicios-${Date.now()}`} />} />
       
-      {/* Admin routes */}
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/modules" component={AdminModules} />
-      <Route path="/admin/testimonials" component={AdminTestimonials} />
-      <Route path="/admin/faqs" component={AdminFaqs} />
-      <Route path="/admin/contact" component={AdminContact} />
-      <Route path="/admin/store" component={AdminStore} />
-      <Route path="/admin/inventory" component={AdminInventory} />
-      <Route path="/admin/users" component={AdminUsers} />
-      <Route path="/admin/sections" component={AdminSections} />
-      <Route path="/admin/appearance" component={AdminAppearance} />
-      <Route path="/admin/reservations" component={AdminReservations} />
-      <Route path="/admin/reservation-settings" component={AdminReservationSettings} />
-      <Route path="/admin/payments" component={AdminPayments} />
-      <Route path="/admin/blog" component={AdminBlog} />
-      <Route path="/admin/orders" component={AdminOrders} />
-      <Route path="/admin/email-config" component={AdminEmailConfig} />
-      <Route path="/admin/contact-info" component={AdminContactInfo} />
+      {/* Admin routes with unique keys */}
+      <Route path="/admin" component={() => <AdminDashboard key={`admin-dashboard-${Date.now()}`} />} />
+      <Route path="/admin/modules" component={() => <AdminModules key={`admin-modules-${Date.now()}`} />} />
+      <Route path="/admin/testimonials" component={() => <AdminTestimonials key={`admin-testimonials-${Date.now()}`} />} />
+      <Route path="/admin/faqs" component={() => <AdminFaqs key={`admin-faqs-${Date.now()}`} />} />
+      <Route path="/admin/contact" component={() => <AdminContact key={`admin-contact-${Date.now()}`} />} />
+      <Route path="/admin/store" component={() => <AdminStore key={`admin-store-${Date.now()}`} />} />
+      <Route path="/admin/inventory" component={() => <AdminInventory key={`admin-inventory-${Date.now()}`} />} />
+      <Route path="/admin/users" component={() => <AdminUsers key={`admin-users-${Date.now()}`} />} />
+      <Route path="/admin/sections" component={() => <AdminSections key={`admin-sections-${Date.now()}`} />} />
+      <Route path="/admin/appearance" component={() => <AdminAppearance key={`admin-appearance-${Date.now()}`} />} />
+      <Route path="/admin/reservations" component={() => <AdminReservations key={`admin-reservations-${Date.now()}`} />} />
+      <Route path="/admin/reservation-settings" component={() => <AdminReservationSettings key={`admin-reservation-settings-${Date.now()}`} />} />
+      <Route path="/admin/payments" component={() => <AdminPayments key={`admin-payments-${Date.now()}`} />} />
+      <Route path="/admin/blog" component={() => <AdminBlog key={`admin-blog-${Date.now()}`} />} />
+      <Route path="/admin/orders" component={() => <AdminOrders key={`admin-orders-${Date.now()}`} />} />
+      <Route path="/admin/email-config" component={() => <AdminEmailConfig key={`admin-email-config-${Date.now()}`} />} />
+      <Route path="/admin/contact-info" component={() => <AdminContactInfo key={`admin-contact-info-${Date.now()}`} />} />
       
       {/* 404 fallback */}
-      <Route component={NotFound} />
+      <Route component={() => <NotFound key={`not-found-${Date.now()}`} />} />
     </Switch>
   );
 }
 
 function App() {
+  const appInstanceRef = useRef(`app-instance-${Date.now()}`);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Router />
+    <QueryClientProvider client={queryClient} key={`${appInstanceRef.current}-query`}>
+      <TooltipProvider key={`${appInstanceRef.current}-tooltip`}>
+        <Router key={`${appInstanceRef.current}-router`} />
         <InlineEditor 
           value=""
           onSave={async () => {}}
+          key={`${appInstanceRef.current}-editor`}
         />
-        <WhatsAppWidget />
-        <Toaster />
+        <WhatsAppWidget key={`${appInstanceRef.current}-whatsapp`} />
+        <Toaster key={`${appInstanceRef.current}-toaster`} />
       </TooltipProvider>
     </QueryClientProvider>
   );
