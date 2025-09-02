@@ -307,14 +307,20 @@ export default function AdminOrders() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ingresos Totales
+              Ingresos Válidos
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatPrice(orders.filter((order: Order) => order.paymentStatus === 'paid')
-                .reduce((sum: number, order: Order) => sum + order.total, 0))}
+              {formatPrice(orders.filter((order: Order) => 
+                order.paymentStatus === 'paid' && 
+                order.status !== 'cancelled' && 
+                order.status !== 'refunded'
+              ).reduce((sum: number, order: Order) => sum + order.total, 0))}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Solo pedidos pagados no cancelados
+            </p>
           </CardContent>
         </Card>
       </div>
