@@ -8,6 +8,8 @@ import { useTheme } from "@/hooks/use-theme";
 import { ModuleRoute } from "@/components/module-route";
 import { LoadingPage } from "@/components/loading-page";
 import type { SiteConfig } from "@shared/schema";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
 
 // Public pages
 import Home from "@/pages/home";
