@@ -30,6 +30,7 @@ export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1075);
+  const [isScrolled, setIsScrolled] = useState(false);
   const navRef = useRef(`navbar-${Date.now()}`);
   const isNavigatingRef = useRef(false);
 
@@ -86,8 +87,18 @@ export function Navbar() {
       setIsDesktop(newIsDesktop);
     };
 
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 50);
+    };
+
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [isMobileMenuOpen]);
 
   const NavLink = useCallback(({ href, children, className, onClick }: {
@@ -111,7 +122,7 @@ export function Navbar() {
   ), [handleNavigation]);
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50" key={navRef.current}>
+    <nav className={`bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 ${isScrolled ? 'navbar-scrolled' : ''}`} key={navRef.current}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 

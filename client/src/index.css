@@ -145,6 +145,35 @@ button {
   text-wrap: balance;
 }
 
+/* Navbar Fixed Class */
+.navbar-fixed {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  transition: all 0.3s ease;
+}
+
+/* Body margin when navbar is fixed */
+.navbar-fixed-body {
+  margin-top: 64px; /* Height of navbar (h-16 = 64px) */
+}
+
+/* Navbar scroll effect */
+.navbar-scrolled {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Dark mode support for navbar scroll */
+.dark .navbar-scrolled {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border-bottom-color: rgba(71, 85, 105, 0.8);
+}
+
 /* React Quill Custom Styles */
 .ql-editor {
   min-height: 200px;
