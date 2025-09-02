@@ -122,7 +122,9 @@ export function Navbar() {
   ), [handleNavigation]);
 
   return (
-    <nav className={`bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 ${isScrolled ? 'navbar-scrolled' : ''}`} key={navRef.current}>
+    //<nav className="navbar-fixed bg-white shadow-sm border-b border-gray-200">
+    //<nav className={`bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 ${isScrolled ? 'navbar-scrolled' : ''}`} key={navRef.current}>
+    <nav className={`navbar-fixed bg-white shadow-sm border-b border-gray-200 ${isScrolled ? 'navbar-scrolled' : ''}`} key={navRef.current}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
