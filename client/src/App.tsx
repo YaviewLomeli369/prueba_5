@@ -11,6 +11,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { ModuleRoute } from "@/components/module-route";
 import { LoadingPage } from "@/components/loading-page";
 import type { SiteConfig } from "@shared/schema";
+import ReloadOnStore from "@/components/ReloadOnStore";
 
 // Public pages
 import Home from "@/pages/home";
@@ -33,7 +34,7 @@ import OrderTracking from "@/pages/order-tracking";
 import AvisoPrivacidad from "@/pages/aviso-privacidad";
 import Conocenos from "@/pages/Conocenos";
 import Servicios from "@/pages/Servicios";
-import TiendaPrueba from "@/pages/tienda-prueba";
+// import TiendaPrueba from "@/pages/tienda-prueba";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -56,9 +57,11 @@ import AdminContactInfo from "@/pages/admin/contact-info";
 
 import NotFound from "@/pages/not-found";
 
+// import ReloadOnStore from "./ReloadOnStore";
+
 function Router() {
   useTheme();
-  
+
   const { data: config, isLoading } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
     staleTime: 5 * 60 * 1000,
@@ -73,12 +76,10 @@ function Router() {
         document.body.style.overflow = '';
       }
     };
-
     const handleBeforeUnload = () => {
       document.body.style.overflow = '';
       sessionStorage.removeItem('navigationState');
     };
-
     const handleTouchStart = () => {
       document.body.style.touchAction = 'auto';
     };
@@ -97,8 +98,11 @@ function Router() {
   if (isLoading) {
     return <LoadingPage />;
   }
-  
+
   return (
+    <>
+      {/* Este componente controla la recarga para /store */}
+      <ReloadOnStore />
     <Switch>
       <Route path="/" component={Home} />
       <ModuleRoute path="/testimonials" component={Testimonials} moduleKey="testimonios" />
@@ -120,7 +124,7 @@ function Router() {
       <Route path="/aviso-privacidad" component={AvisoPrivacidad} />
       <Route path="/conocenos" component={Conocenos} />
       <Route path="/servicios" component={Servicios} />
-      <Route path="/tienda-prueba" component={TiendaPrueba} />
+      {/* <Route path="/tienda-prueba" component={TiendaPrueba} /> */}
       
       {/* Admin routes */}
       <Route path="/admin" component={AdminDashboard} />
@@ -143,6 +147,8 @@ function Router() {
       
       <Route component={NotFound} />
     </Switch>
+
+  </>
   );
 }
 

@@ -50,7 +50,7 @@ export function Navbar() {
     { href: "/faqs", label: "FAQs", moduleKey: "faqs" },
     { href: "/contact", label: "Contacto", moduleKey: "contacto" },
     { href: "/store", label: "Tienda", moduleKey: "tienda" },
-    { href: "/tienda-prueba", label: "Tienda Prueba", always: true },
+    // { href: "/tienda-prueba", label: "Tienda Prueba", always: true },
     { href: "/blog", label: "Blog", moduleKey: "blog" },
     { href: "/reservations", label: "Reservas", moduleKey: "reservas" },
     { href: "/conocenos", label: "Conócenos", always: true },
