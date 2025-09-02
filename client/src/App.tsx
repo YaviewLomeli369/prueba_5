@@ -32,6 +32,7 @@ import OrderTracking from "@/pages/order-tracking";
 import AvisoPrivacidad from "@/pages/aviso-privacidad";
 import Conocenos from "@/pages/Conocenos";
 import Servicios from "@/pages/Servicios";
+import TiendaPrueba from "@/pages/tienda-prueba";
 
 
 // Admin pages
@@ -130,6 +131,7 @@ function Router() {
       <Route path="/aviso-privacidad" component={() => <AvisoPrivacidad key={`aviso-privacidad-${Date.now()}`} />} />
       <Route path="/conocenos" component={() => <Conocenos key={`conocenos-${Date.now()}`} />} />
       <Route path="/servicios" component={() => <Servicios key={`servicios-${Date.now()}`} />} />
+      <Route path="/tienda-prueba" component={() => <TiendaPrueba key={`tienda-prueba-${Date.now()}`} />} />
       
       {/* Admin routes with unique keys */}
       <Route path="/admin" component={() => <AdminDashboard key={`admin-dashboard-${Date.now()}`} />} />
