@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,7 +80,9 @@ export default function ShippingInfoPage() {
         !shippingAddress.firstName || !shippingAddress.lastName ||
         !shippingAddress.address1 || !shippingAddress.city ||
         !shippingAddress.state || !shippingAddress.zipCode ||
-        (billingDifferent && (!billingAddress.firstName || !billingAddress.lastName || !billingAddress.address1 || !billingAddress.city || !billingAddress.state || !billingAddress.zipCode))
+        (billingDifferent && (!billingAddress.firstName || !billingAddress.lastName || 
+         !billingAddress.address1 || !billingAddress.city || !billingAddress.state || 
+         !billingAddress.zipCode))
     ) {
       toast({
         title: "Error",
@@ -137,7 +140,7 @@ export default function ShippingInfoPage() {
                   <Label htmlFor="customer-firstName">Nombre *</Label>
                   <Input
                     id="customer-firstName"
-                    defaultValue={customerInfo.firstName}
+                    value={customerInfo.firstName}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, firstName: e.target.value })}
                     required
                     autoComplete="given-name"
@@ -147,7 +150,7 @@ export default function ShippingInfoPage() {
                   <Label htmlFor="customer-lastName">Apellidos *</Label>
                   <Input
                     id="customer-lastName"
-                    defaultValue={customerInfo.lastName}
+                    value={customerInfo.lastName}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, lastName: e.target.value })}
                     required
                     autoComplete="family-name"
@@ -160,7 +163,7 @@ export default function ShippingInfoPage() {
                 <Input
                   id="email"
                   type="email"
-                  defaultValue={customerInfo.email}
+                  value={customerInfo.email}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
                   required
                   autoComplete="email"
@@ -172,7 +175,7 @@ export default function ShippingInfoPage() {
                 <Input
                   id="customer-phone"
                   type="tel"
-                  defaultValue={customerInfo.phone}
+                  value={customerInfo.phone || ""}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                   autoComplete="tel"
                 />
@@ -191,7 +194,7 @@ export default function ShippingInfoPage() {
                   <Label htmlFor="shipping-firstName">Nombre *</Label>
                   <Input
                     id="shipping-firstName"
-                    defaultValue={shippingAddress.firstName}
+                    value={shippingAddress.firstName}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, firstName: e.target.value })}
                     required
                     autoComplete="given-name"
@@ -201,7 +204,7 @@ export default function ShippingInfoPage() {
                   <Label htmlFor="shipping-lastName">Apellidos *</Label>
                   <Input
                     id="shipping-lastName"
-                    defaultValue={shippingAddress.lastName}
+                    value={shippingAddress.lastName}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, lastName: e.target.value })}
                     required
                     autoComplete="family-name"
@@ -213,7 +216,7 @@ export default function ShippingInfoPage() {
                 <Label htmlFor="address1">Dirección *</Label>
                 <Input
                   id="address1"
-                  defaultValue={shippingAddress.address1}
+                  value={shippingAddress.address1}
                   onChange={(e) => setShippingAddress({ ...shippingAddress, address1: e.target.value })}
                   placeholder="Calle y número"
                   required
@@ -225,7 +228,7 @@ export default function ShippingInfoPage() {
                 <Label htmlFor="address2">Dirección 2 (Opcional)</Label>
                 <Input
                   id="address2"
-                  defaultValue={shippingAddress.address2}
+                  value={shippingAddress.address2 || ""}
                   onChange={(e) => setShippingAddress({ ...shippingAddress, address2: e.target.value })}
                   placeholder="Colonia, edificio, piso, etc."
                   autoComplete="address-line2"
@@ -237,7 +240,7 @@ export default function ShippingInfoPage() {
                   <Label htmlFor="city">Ciudad *</Label>
                   <Input
                     id="city"
-                    defaultValue={shippingAddress.city}
+                    value={shippingAddress.city}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
                     required
                     autoComplete="address-level2"
@@ -253,9 +256,6 @@ export default function ShippingInfoPage() {
                       <SelectValue placeholder="Selecciona estado *" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="placeholder" disabled>
-                              Seleccionar estado
-                            </SelectItem>
                       {mexicanStates.map((state) => (
                         <SelectItem key={state} value={state}>
                           {state}
@@ -268,7 +268,7 @@ export default function ShippingInfoPage() {
                   <Label htmlFor="zipCode">Código Postal *</Label>
                   <Input
                     id="zipCode"
-                    defaultValue={shippingAddress.zipCode}
+                    value={shippingAddress.zipCode}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value })}
                     required
                     autoComplete="postal-code"
@@ -281,7 +281,7 @@ export default function ShippingInfoPage() {
                 <Input
                   id="shipping-phone"
                   type="tel"
-                  defaultValue={shippingAddress.phone}
+                  value={shippingAddress.phone || ""}
                   onChange={(e) => setShippingAddress({ ...shippingAddress, phone: e.target.value })}
                   autoComplete="tel"
                 />
@@ -293,9 +293,11 @@ export default function ShippingInfoPage() {
                   type="checkbox"
                   id="billing-different"
                   checked={billingDifferent}
-                  onChange={() => setBillingDifferent(!billingDifferent)}
+                  onChange={(e) => setBillingDifferent(e.target.checked)}
                 />
-                <label htmlFor="billing-different">¿La dirección de facturación es diferente?</label>
+                <label htmlFor="billing-different" className="text-sm">
+                  ¿La dirección de facturación es diferente?
+                </label>
               </div>
 
               {billingDifferent && (
@@ -309,9 +311,9 @@ export default function ShippingInfoPage() {
                         <Label htmlFor="billing-firstName">Nombre *</Label>
                         <Input
                           id="billing-firstName"
-                          defaultValue={billingAddress.firstName}
+                          value={billingAddress.firstName}
                           onChange={(e) => setBillingAddress({ ...billingAddress, firstName: e.target.value })}
-                          required
+                          required={billingDifferent}
                           autoComplete="given-name"
                         />
                       </div>
@@ -319,9 +321,9 @@ export default function ShippingInfoPage() {
                         <Label htmlFor="billing-lastName">Apellidos *</Label>
                         <Input
                           id="billing-lastName"
-                          defaultValue={billingAddress.lastName}
+                          value={billingAddress.lastName}
                           onChange={(e) => setBillingAddress({ ...billingAddress, lastName: e.target.value })}
-                          required
+                          required={billingDifferent}
                           autoComplete="family-name"
                         />
                       </div>
@@ -331,9 +333,9 @@ export default function ShippingInfoPage() {
                       <Label htmlFor="billing-address1">Dirección *</Label>
                       <Input
                         id="billing-address1"
-                        defaultValue={billingAddress.address1}
+                        value={billingAddress.address1}
                         onChange={(e) => setBillingAddress({ ...billingAddress, address1: e.target.value })}
-                        required
+                        required={billingDifferent}
                         autoComplete="address-line1"
                       />
                     </div>
@@ -342,7 +344,7 @@ export default function ShippingInfoPage() {
                       <Label htmlFor="billing-address2">Dirección 2 (Opcional)</Label>
                       <Input
                         id="billing-address2"
-                        defaultValue={billingAddress.address2}
+                        value={billingAddress.address2 || ""}
                         onChange={(e) => setBillingAddress({ ...billingAddress, address2: e.target.value })}
                         autoComplete="address-line2"
                       />
@@ -353,25 +355,22 @@ export default function ShippingInfoPage() {
                         <Label htmlFor="billing-city">Ciudad *</Label>
                         <Input
                           id="billing-city"
-                          defaultValue={billingAddress.city}
+                          value={billingAddress.city}
                           onChange={(e) => setBillingAddress({ ...billingAddress, city: e.target.value })}
-                          required
+                          required={billingDifferent}
                           autoComplete="address-level2"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="billing-state">Estado *</Label>
                         <Select
-                          value={shippingAddress.state || "placeholder"}
-                          onValueChange={(value) => setShippingAddress({ ...shippingAddress, state: value })}
+                          value={billingAddress.state || ""}
+                          onValueChange={(value) => setBillingAddress({ ...billingAddress, state: value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona estado *" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="placeholder" disabled>
-                              Seleccionar estado
-                            </SelectItem>
                             {mexicanStates.map((state) => (
                               <SelectItem key={state} value={state}>
                                 {state}
@@ -379,15 +378,14 @@ export default function ShippingInfoPage() {
                             ))}
                           </SelectContent>
                         </Select>
-
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="billing-zipCode">Código Postal *</Label>
                         <Input
                           id="billing-zipCode"
-                          defaultValue={billingAddress.zipCode}
+                          value={billingAddress.zipCode}
                           onChange={(e) => setBillingAddress({ ...billingAddress, zipCode: e.target.value })}
-                          required
+                          required={billingDifferent}
                           autoComplete="postal-code"
                         />
                       </div>
@@ -398,7 +396,7 @@ export default function ShippingInfoPage() {
                       <Input
                         id="billing-phone"
                         type="tel"
-                        defaultValue={billingAddress.phone}
+                        value={billingAddress.phone || ""}
                         onChange={(e) => setBillingAddress({ ...billingAddress, phone: e.target.value })}
                         autoComplete="tel"
                       />
