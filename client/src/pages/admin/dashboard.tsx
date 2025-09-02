@@ -122,6 +122,59 @@ export default function AdminDashboard() {
     return acc;
   }, {} as Record<string, number>) || {};
 
+  // Calculate order statistics correctly
+  const orderStats = orders?.reduce((acc, order) => {
+    acc.total++;
+    
+    // Count by status
+    if (order.status === 'pending') acc.pending++;
+    else if (order.status === 'confirmed') acc.confirmed++;
+    else if (order.status === 'processing') acc.processing++;
+    else if (order.status === 'shipped') acc.shipped++;
+    else if (order.status === 'delivered') acc.delivered++;
+    else if (order.status === 'cancelled') acc.cancelled++;
+    else if (order.status === 'refunded') acc.refunded++;
+    
+    // Only count revenue from non-cancelled orders
+    if (order.status !== 'cancelled' && order.paymentStatus === 'paid') {
+      acc.revenue += order.total;
+      acc.paidOrders++;
+    }
+    
+    return acc;
+  }, {
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+    refunded: 0,
+    revenue: 0,
+    paidOrders: 0
+  }) || {
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+    refunded: 0,
+    revenue: 0,
+    paidOrders: 0
+  };
+
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount / 100);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-8">
@@ -186,18 +239,18 @@ export default function AdminDashboard() {
             />
           )}
           <StatsCard
-            title="Testimonios"
-            value={testimonials?.length?.toString() || "0"}
-            icon={Quote}
+            title="Pedidos Activos"
+            value={`${orderStats.total - orderStats.cancelled - orderStats.refunded}`}
+            icon={DollarSign}
             iconColor="text-success"
-            description="testimonios publicados"
+            description={`${orderStats.pending} pendientes, ${orderStats.cancelled} cancelados`}
           />
           <StatsCard
-            title="Mensajes de Contacto"
-            value={contactMessages?.length?.toString() || "0"}
+            title="Ingresos Válidos"
+            value={formatPrice(orderStats.revenue)}
             icon={Mail}
             iconColor="text-warning"
-            description="mensajes recibidos"
+            description={`${orderStats.paidOrders} pedidos pagados`}
           />
         </div>
 
@@ -296,8 +349,9 @@ export default function AdminDashboard() {
               icon={Package}
               isActive={modules.tienda?.activo || false}
               stats={{
-                "Total": orders?.length?.toString() || "0",
-                "Pendientes": orders?.filter((order: any) => order.status === 'pending')?.length?.toString() || "0",
+                "Activos": `${orderStats.total - orderStats.cancelled - orderStats.refunded}`,
+                "Cancelados": orderStats.cancelled.toString(),
+                "Reembolsados": orderStats.refunded.toString(),
               }}
               onToggle={(active) => handleModuleToggle("tienda", active)}
               onManage={() => window.location.href = "/admin/orders"}
@@ -318,6 +372,119 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+        )}
+
+        {/* Order Statistics - Only show if there are orders */}
+        {orders && orders.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Estadísticas de Pedidos</h2>
+              <Button variant="outline" onClick={() => window.location.href = "/admin/orders"}>
+                <Package className="mr-2 h-4 w-4" />
+                Ver todos los pedidos
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-900">{orderStats.total}</div>
+                  <div className="text-sm text-gray-600">Total</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-yellow-600">{orderStats.pending}</div>
+                  <div className="text-sm text-gray-600">Pendientes</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">{orderStats.processing}</div>
+                  <div className="text-sm text-gray-600">Procesando</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-purple-600">{orderStats.shipped}</div>
+                  <div className="text-sm text-gray-600">Enviados</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{orderStats.delivered}</div>
+                  <div className="text-sm text-gray-600">Entregados</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-red-600">{orderStats.cancelled}</div>
+                  <div className="text-sm text-gray-600">Cancelados</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-orange-600">{orderStats.refunded}</div>
+                  <div className="text-sm text-gray-600">Reembolsados</div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">Ingresos Válidos</div>
+                      <div className="text-sm text-gray-600">Solo pedidos pagados no cancelados</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-600">{formatPrice(orderStats.revenue)}</div>
+                      <div className="text-sm text-gray-500">{orderStats.paidOrders} pedidos</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">Promedio por Pedido</div>
+                      <div className="text-sm text-gray-600">Valor promedio válido</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {orderStats.paidOrders > 0 ? formatPrice(orderStats.revenue / orderStats.paidOrders) : formatPrice(0)}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">Tasa de Éxito</div>
+                      <div className="text-sm text-gray-600">Pedidos no cancelados</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {orderStats.total > 0 ? Math.round(((orderStats.total - orderStats.cancelled) / orderStats.total) * 100) : 0}%
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         )}
 
         {/* System Info and User Roles */}
