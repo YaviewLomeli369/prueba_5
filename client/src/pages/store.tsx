@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -22,7 +23,6 @@ import type { SiteConfig, Product, ProductCategory } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import AnimatedSection from "@/components/AnimatedSection";
 import { Spinner } from "@/components/ui/spinner";
-import { useStoreData } from "@/hooks/use-store-data";
 
 export default function Store() {
   // ✅ ALL HOOKS MUST BE AT THE TOP - NO CONDITIONAL EXECUTION
@@ -30,19 +30,8 @@ export default function Store() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMountedRef = useRef(true);
-
-  // Use centralized store data hook
-  const {
-    products,
-    categories,
-    isLoading,
-    isStoreEnabled,
-    appearance,
-    availableCategories,
-    getCategoryName,
-  } = useStoreData();
-
-  // Core states - simplified
+  
+  // Core states
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -52,16 +41,38 @@ export default function Store() {
   const [cart, setCart] = useState<Array<{ product: Product; quantity: number }>>([]);
   const [isNavigating, setIsNavigating] = useState(false);
 
+  // ✅ FETCH DATA WITH PROPER ERROR HANDLING AND MOBILE OPTIMIZATION
+  const { data: config, isLoading: configLoading } = useQuery<SiteConfig>({
+    queryKey: ["/api/config"],
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
+  const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
+    queryKey: ["/api/store/products"],
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
+  const { data: categories } = useQuery<ProductCategory[]>({
+    queryKey: ["/api/store/categories"],
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
   // ✅ MUTATIONS
   const addToCartMutation = useMutation({
     mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
       if (!isMountedRef.current || isNavigating) {
         throw new Error("Component unmounted or navigating");
       }
-
+      
       const product = products?.find(p => p.id === productId);
       if (!product) throw new Error("Producto no encontrado");
-
+      
       setCart(prev => {
         const existing = prev.find(item => item.product.id === productId);
         if (existing) {
@@ -91,9 +102,29 @@ export default function Store() {
   });
 
   // ✅ COMPUTED VALUES - SAFE ACCESS WITH EARLY RETURNS
-  const filteredProducts = useMemo(() => {
-    if (!products || products.length === 0 || isNavigating) return [];
+  const storeConfig = useMemo(() => {
+    if (!config) return { isStoreEnabled: false, appearance: {} };
+    
+    const configData = config?.config as any;
+    const modules = configData?.frontpage?.modulos || {};
+    const appearance = configData?.appearance || {};
+    
+    return {
+      isStoreEnabled: modules.tienda?.activo,
+      appearance,
+      modules
+    };
+  }, [config]);
 
+  const { appearance } = storeConfig;
+  
+  const availableCategories = useMemo(() => {
+    return ["all", ...(categories?.map(cat => cat.id) || [])];
+  }, [categories]);
+
+  const filteredProducts = useMemo(() => {
+    if (!products || isNavigating) return [];
+    
     return products.filter(p => {
       if (!p.isActive) return false;
       const matchesCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
@@ -113,7 +144,7 @@ export default function Store() {
   // ✅ CALLBACK FUNCTIONS
   const performCleanup = useCallback(() => {
     if (!isMountedRef.current) return;
-
+    
     try {
       setSelectedCategory("all");
       setSearchTerm("");
@@ -122,11 +153,11 @@ export default function Store() {
       setProductQuantity(1);
       setFavorites(new Set());
       setIsNavigating(false);
-
+      
       // Clear any body classes that might have been added by modals
       document.body.classList.remove('modal-open', 'overflow-hidden');
       document.body.style.overflow = '';
-
+      
     } catch (error) {
       console.warn('Cleanup error:', error);
     }
@@ -134,11 +165,11 @@ export default function Store() {
 
   const handleNavigation = useCallback((href: string) => {
     if (!isMountedRef.current) return;
-
+    
     try {
       setIsNavigating(true);
       performCleanup();
-
+      
       setTimeout(() => {
         if (isMountedRef.current) {
           setLocation(href);
@@ -152,7 +183,7 @@ export default function Store() {
 
   const toggleFavorite = useCallback((productId: string) => {
     if (!isMountedRef.current || isNavigating) return;
-
+    
     setFavorites(prev => {
       const newFavorites = new Set(prev);
       if (newFavorites.has(productId)) {
@@ -166,16 +197,21 @@ export default function Store() {
     });
   }, [toast, isNavigating]);
 
+  const getCategoryName = useCallback((categoryId: string) => {
+    if (categoryId === "all") return "Todas las categorías";
+    return categories?.find(cat => cat.id === categoryId)?.name || categoryId;
+  }, [categories]);
+
   const openProductModal = useCallback((product: Product) => {
     if (!isMountedRef.current || isNavigating || document.visibilityState === 'hidden') return;
-
+    
     setSelectedProduct(product);
     setProductQuantity(1);
   }, [isNavigating]);
 
   const addToCartFromModal = useCallback(() => {
     if (!selectedProduct || !isMountedRef.current || isNavigating) return;
-
+    
     addToCartMutation.mutate({ productId: selectedProduct.id, quantity: productQuantity });
     setSelectedProduct(null);
     setProductQuantity(1);
@@ -183,7 +219,7 @@ export default function Store() {
 
   const handleCheckout = useCallback(() => {
     if (cart.length === 0 || !isMountedRef.current || isNavigating) return;
-
+    
     try {
       localStorage.setItem('checkoutItems', JSON.stringify(cart));
       setIsCartOpen(false);
@@ -207,7 +243,7 @@ export default function Store() {
 
   const updateCartQuantity = useCallback((productId: string, newQuantity: number) => {
     if (!isMountedRef.current || isNavigating) return;
-
+    
     if (newQuantity <= 0) {
       removeFromCart(productId);
       return;
@@ -220,7 +256,7 @@ export default function Store() {
   // ✅ EFFECTS - MUST BE AFTER ALL HOOKS
   useEffect(() => {
     isMountedRef.current = true;
-
+    
     return () => {
       isMountedRef.current = false;
       performCleanup();
@@ -256,15 +292,17 @@ export default function Store() {
   }, [performCleanup]);
 
   useEffect(() => {
-    if (categories && selectedCategory !== "all") {
+    if (products && categories) {
       const validCategories = categories.map(cat => cat.id);
-      if (!validCategories.includes(selectedCategory)) {
+      if (!validCategories.includes(selectedCategory) && selectedCategory !== "all") {
         setSelectedCategory("all");
       }
     }
-  }, [categories, selectedCategory]);
+  }, [products, categories, selectedCategory]);
 
   // ✅ LOADING AND ERROR STATES - AFTER ALL HOOKS
+  const isLoading = configLoading || productsLoading;
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -283,7 +321,7 @@ export default function Store() {
     );
   }
 
-  if (!isStoreEnabled) {
+  if (!storeConfig.isStoreEnabled) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -299,7 +337,7 @@ export default function Store() {
   }
 
   return (
-    <div
+    <div 
       className="min-h-screen bg-background"
       style={{
         backgroundColor: appearance.backgroundColor || "inherit",
@@ -432,9 +470,9 @@ export default function Store() {
                         variant="ghost"
                         size="sm"
                         className="shrink-0 p-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          !isNavigating && toggleFavorite(product.id);
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          !isNavigating && toggleFavorite(product.id); 
                         }}
                         disabled={isNavigating}
                       >
@@ -451,9 +489,9 @@ export default function Store() {
                     <div className="flex items-center justify-between mt-auto">
                       <span className="text-2xl font-bold text-primary">${(product.price / 100).toFixed(2)}</span>
                       <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          !isNavigating && addToCartMutation.mutate({ productId: product.id });
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          !isNavigating && addToCartMutation.mutate({ productId: product.id }); 
                         }}
                         disabled={(product.stock !== null && product.stock === 0) || addToCartMutation.isPending || isNavigating}
                         className="gap-2"
@@ -469,8 +507,8 @@ export default function Store() {
         </AnimatedSection>
 
         {/* Modal Producto */}
-        <Dialog
-          open={!!selectedProduct && !isNavigating}
+        <Dialog 
+          open={!!selectedProduct && !isNavigating} 
           onOpenChange={(open) => {
             if (!open && !isNavigating) {
               setSelectedProduct(null);
@@ -504,9 +542,9 @@ export default function Store() {
                   {/* Cantidad y agregar */}
                   <div className="flex items-center gap-4 mt-4">
                     <div className="flex items-center border rounded-md">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
                         onClick={() => !isNavigating && setProductQuantity(Math.max(1, productQuantity - 1))}
                         disabled={isNavigating}
                       >
@@ -524,9 +562,9 @@ export default function Store() {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Button
-                      onClick={addToCartFromModal}
-                      className="flex-1"
+                    <Button 
+                      onClick={addToCartFromModal} 
+                      className="flex-1" 
                       disabled={(selectedProduct.stock !== null && selectedProduct.stock === 0) || addToCartMutation.isPending || isNavigating}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" /> Agregar al carrito
@@ -547,12 +585,12 @@ export default function Store() {
                 {searchTerm || selectedCategory !== "all" ? "No se encontraron productos que coincidan con los filtros." : "Actualmente no tenemos productos en stock."}
               </p>
               {(searchTerm || selectedCategory !== "all") && (
-                <Button
-                  variant="outline"
-                  className="mt-4"
+                <Button 
+                  variant="outline" 
+                  className="mt-4" 
                   onClick={() => {
                     if (!isNavigating) {
-                      setSearchTerm("");
+                      setSearchTerm(""); 
                       setSelectedCategory("all");
                     }
                   }}
