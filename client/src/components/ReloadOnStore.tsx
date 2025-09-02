@@ -1,27 +1,30 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 
 const ReloadOnStore: React.FC = () => {
   const [location] = useLocation();
-  const previousWasStore = useRef(false);
 
   useEffect(() => {
-    // Usamos sessionStorage para evitar loop infinito
-    const hasReloaded = sessionStorage.getItem("storeReloaded");
+    const wasInStore = sessionStorage.getItem("wasInStore");
 
-    if (!hasReloaded) {
-      if (location === "/store" || previousWasStore.current) {
-        sessionStorage.setItem("storeReloaded", "true"); // marca recarga
-        window.location.reload();
-      }
-    } else {
-      // Limpiamos la marca si ya estamos fuera de /store
-      if (location !== "/store") {
-        sessionStorage.removeItem("storeReloaded");
-      }
+    // Si antes estábamos en /store y ahora salimos → recarga
+    if (wasInStore === "true" && location !== "/store") {
+      window.location.reload();
     }
 
-    previousWasStore.current = location === "/store";
+    // Si entramos a /store desde cualquier otra ruta → recarga
+    if (location === "/store") {
+      const hasReloaded = sessionStorage.getItem("storeReloaded");
+      if (!hasReloaded) {
+        sessionStorage.setItem("storeReloaded", "true");
+        window.location.reload();
+      }
+      sessionStorage.setItem("wasInStore", "true");
+    } else {
+      // marcamos que ya no estamos en /store
+      sessionStorage.removeItem("wasInStore");
+      sessionStorage.removeItem("storeReloaded");
+    }
   }, [location]);
 
   return null;
