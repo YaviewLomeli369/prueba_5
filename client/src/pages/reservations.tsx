@@ -308,7 +308,7 @@ export default function Reservations() {
                               </SelectItem>
                             ))
                           ) : selectedDate ? (
-                            <SelectItem value="no-slots" disabled>No hay horarios disponibles</SelectItem>
+                            <SelectItem value="no-slots-available" disabled>No hay horarios disponibles</SelectItem>
                           ) : null}
                         </SelectContent>
                       </Select>
