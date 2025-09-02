@@ -94,7 +94,13 @@ function CheckoutForm({ cartItems, customerInfo, shippingAddress, paymentIntentI
   };
 
   const getTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+    const total = cartItems.reduce((sum, item) => {
+      const price = item.product.price || 0;
+      const quantity = item.quantity || 1;
+      return sum + (price * quantity);
+    }, 0);
+    console.log("Total calculated:", total, "from items:", cartItems);
+    return total;
   };
 
   const formatPrice = (price: number, currency = 'MXN') => {
@@ -267,80 +273,106 @@ export default function Checkout() {
     }
   }, [paymentConfig]);
 
-  // Create payment intent
-  const createPaymentIntent = useMutation({
-    mutationFn: async (data: { amount: number; currency: string; cartItems: any[] }) => {
-      console.log("Creating payment intent with data:", data);
+  // Create payment intent with proper error handling
+  const { data: paymentIntent, isLoading: paymentLoading, error: paymentError } = useQuery({
+    queryKey: ["/api/create-payment-intent", cartItems],
+    queryFn: async () => {
+      if (cartItems.length === 0) {
+        throw new Error("No hay productos en el carrito");
+      }
+      
+      const total = cartItems.reduce((sum: number, item: any) => {
+        const price = item.product.price || 0;
+        const quantity = item.quantity || 1;
+        return sum + (price * quantity);
+      }, 0);
+      
+      if (total <= 0) {
+        throw new Error("El total del pedido debe ser mayor a 0");
+      }
+      
+      const currency = cartItems[0]?.product?.currency || 'MXN';
+      
+      console.log("Creating payment intent:", { total, currency, items: cartItems.length });
+      
       const response = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          amount: total / 100, // Convert to decimal for backend
+          currency: currency.toLowerCase(),
+          cartItems: cartItems.map((item: any) => ({
+            productId: item.product.id,
+            quantity: item.quantity
+          }))
+        })
       });
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Payment intent creation failed:", errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        console.error("Payment intent creation failed:", response.status, errorText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
       
-      return response.json();
+      const result = await response.json();
+      console.log("Payment intent created successfully:", result);
+      return result;
     },
-    onError: (error: any) => {
-      console.error("Payment intent mutation error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo inicializar el pago",
-        variant: "destructive"
-      });
-    }
+    enabled: cartItems.length > 0 && !!paymentConfig?.stripePublicKey && !!customerInfo && !!shippingAddress,
+    retry: 3,
+    retryDelay: 1000
   });
 
-  const { data: paymentIntent, isLoading: paymentLoading } = useQuery({
-    queryKey: ["/api/create-payment-intent", cartItems],
-    queryFn: async () => {
-      if (cartItems.length === 0) return null;
-      
-      const total = cartItems.reduce((sum: number, item: any) => sum + ((item.product.price / 100) * item.quantity), 0);
-      const currency = cartItems[0]?.product?.currency || 'MXN';
-      
-      return createPaymentIntent.mutateAsync({
-        amount: total,
-        currency: currency.toLowerCase(),
-        cartItems: cartItems.map((item: any) => ({
-          productId: item.product.id,
-          quantity: item.quantity
-        }))
-      });
-    },
-    enabled: cartItems.length > 0 && !!paymentConfig?.stripePublicKey
-  });
-
+  // Show loading while data is being prepared
   if (!customerInfo || !shippingAddress || cartItems.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+          <p>Cargando información del pedido...</p>
+        </div>
       </div>
     );
   }
 
+  // Check payment config first
+  if (!paymentConfig?.stripePublicKey) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error: Configuración de pagos no disponible</p>
+          <Button onClick={() => setLocation('/shipping-info')}>
+            Volver atrás
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show payment error if any
+  if (paymentError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error al inicializar el pago: {paymentError.message}</p>
+          <Button onClick={() => setLocation('/shipping-info')}>
+            Volver atrás
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while payment intent is being created
   if (paymentLoading || !paymentIntent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
           <p>Iniciando pago...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!paymentConfig?.stripePublicKey) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">Error: Configuración de pagos no disponible</p>
+          <p className="text-sm text-gray-500 mt-2">Esto puede tomar unos segundos</p>
         </div>
       </div>
     );
