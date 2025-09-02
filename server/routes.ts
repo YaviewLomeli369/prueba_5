@@ -1419,6 +1419,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if product has stock tracking enabled and validate availability
       if (product.stock !== null) {
+        if (product.stock === 0) {
+          return res.status(400).json({ message: "Producto agotado" });
+        }
+
         // Get current cart items for this user/session to check total quantity
         const existingCartItems = await storage.getCartItems(cartData.userId, cartData.sessionId);
         const existingItem = existingCartItems.find(item => item.productId === cartData.productId);
@@ -1434,14 +1438,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             maxCanAdd: Math.max(0, product.stock - currentCartQuantity)
           });
         }
-
-        if (product.stock === 0) {
-          return res.status(400).json({ message: "Product is out of stock" });
-        }
       }
 
-      const item = await storage.addToCart(cartData);
-      res.json(item);
+      // Check if item already exists in cart
+      const existingCartItems = await storage.getCartItems(cartData.userId, cartData.sessionId);
+      const existingItem = existingCartItems.find(item => item.productId === cartData.productId);
+      
+      if (existingItem) {
+        // Update existing item quantity
+        const newQuantity = existingItem.quantity + (cartData.quantity || 1);
+        const updatedItem = await storage.updateCartItem(existingItem.id, newQuantity);
+        res.json(updatedItem);
+      } else {
+        // Create new cart item
+        const item = await storage.addToCart(cartData);
+        res.json(item);
+      }
     } catch (error) {
       res.status(400).json({ message: error instanceof Error ? error.message : "Invalid data" });
     }
