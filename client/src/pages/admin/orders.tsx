@@ -90,7 +90,7 @@ export default function AdminOrders() {
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderId, status }: { orderId: string; status: string }) => {
       console.log('Updating order status - Frontend:', { orderId, status });
-      
+
       return apiRequest(`/api/store/orders/${orderId}/status`, {
         method: "PUT",
         body: { status }, // Let apiRequest handle JSON.stringify
@@ -99,12 +99,12 @@ export default function AdminOrders() {
         }
       });
     },
-    onSuccess: (data) => {
-      console.log('Order status updated successfully:', data);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh store stats
       toast({
         title: "Estado actualizado",
-        description: "El estado del pedido se ha actualizado correctamente"
+        description: "El estado del pedido ha sido actualizado correctamente",
       });
     },
     onError: (error: any) => {
@@ -119,7 +119,7 @@ export default function AdminOrders() {
 
   const handleViewOrder = async (order: Order) => {
     setSelectedOrder(order);
-    
+
     // Fetch order items
     try {
       const items = await apiRequest(`/api/store/orders/${order.id}/items`, { method: "GET" });
@@ -128,7 +128,7 @@ export default function AdminOrders() {
       console.error("Error fetching order items:", error);
       setSelectedItems([]);
     }
-    
+
     setShowOrderDetails(true);
   };
 

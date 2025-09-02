@@ -40,26 +40,32 @@ export default function AdminDashboard() {
 
   const { data: users } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
+    refetchInterval: 60000, // Refresh every minute
   });
 
   const { data: testimonials } = useQuery({
     queryKey: ["/api/testimonials"],
+    refetchInterval: 60000,
   });
 
   const { data: contactMessages } = useQuery({
     queryKey: ["/api/contact/messages"],
+    refetchInterval: 30000, // More frequent for contact messages
   });
 
   const { data: blogPosts } = useQuery({
     queryKey: ["/api/blog"],
+    refetchInterval: 60000,
   });
 
   const { data: orders } = useQuery({
     queryKey: ["/api/store/orders"],
+    refetchInterval: 30000, // More frequent for orders
   });
 
   const { data: products } = useQuery({
     queryKey: ["/api/store/products"],
+    refetchInterval: 60000,
   });
 
   const modules = config?.config?.frontpage?.modulos || {};
@@ -129,6 +135,16 @@ export default function AdminDashboard() {
             <Button variant="outline" onClick={() => window.open("/", "_blank")}>
               <Eye className="mr-2 h-4 w-4" />
               Ver Sitio
+            </Button>
+            <Button variant="outline" onClick={() => {
+              queryClient.invalidateQueries();
+              toast({
+                title: "Datos actualizados",
+                description: "Todas las estadísticas se han refrescado",
+              });
+            }}>
+              <Download className="mr-2 h-4 w-4" />
+              Actualizar Stats
             </Button>
             <Button onClick={() => {
               queryClient.invalidateQueries();
