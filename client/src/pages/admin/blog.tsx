@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { 
   Table, 
   TableBody, 
@@ -93,6 +95,37 @@ export default function AdminBlog() {
     tags: [] as string[],
     featuredImage: "",
   });
+
+  // Configuración del editor Quill
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      [{ 'font': [] }],
+      [{ 'size': ['small', false, 'large', 'huge'] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'script': 'sub'}, { 'script': 'super' }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      [{ 'direction': 'rtl' }],
+      [{ 'align': [] }],
+      ['blockquote', 'code-block'],
+      ['link', 'image', 'video'],
+      ['clean']
+    ],
+  };
+
+  const quillFormats = [
+    'header', 'font', 'size',
+    'bold', 'italic', 'underline', 'strike',
+    'color', 'background',
+    'script',
+    'list', 'bullet',
+    'indent',
+    'direction', 'align',
+    'blockquote', 'code-block',
+    'link', 'image', 'video'
+  ];
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -552,14 +585,17 @@ export default function AdminBlog() {
               
               <div className="space-y-2">
                 <Label htmlFor="content">Contenido</Label>
-                <Textarea
-                  id="content"
-                  value={newPost.content}
-                  onChange={(e) => setNewPost({...newPost, content: e.target.value})}
-                  placeholder="Contenido completo del post..."
-                  rows={10}
-                  required
-                />
+                <div className="border rounded-md">
+                  <ReactQuill
+                    theme="snow"
+                    value={newPost.content}
+                    onChange={(content) => setNewPost({...newPost, content})}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    placeholder="Escribe el contenido completo del post..."
+                    style={{ height: '300px', marginBottom: '50px' }}
+                  />
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -670,13 +706,17 @@ export default function AdminBlog() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="edit-content">Contenido</Label>
-                  <Textarea
-                    id="edit-content"
-                    value={editingPost.content}
-                    onChange={(e) => setEditingPost({...editingPost, content: e.target.value})}
-                    placeholder="Contenido completo del post..."
-                    rows={10}
-                  />
+                  <div className="border rounded-md">
+                    <ReactQuill
+                      theme="snow"
+                      value={editingPost.content}
+                      onChange={(content) => setEditingPost({...editingPost, content})}
+                      modules={quillModules}
+                      formats={quillFormats}
+                      placeholder="Escribe el contenido completo del post..."
+                      style={{ height: '300px', marginBottom: '50px' }}
+                    />
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">

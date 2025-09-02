@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import express from "express";
 import {
   insertUserSchema,
   insertSiteConfigSchema,
@@ -72,6 +73,25 @@ function requireRole(roles: string[]) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add JSON parsing middleware with better error handling
+  app.use('/api', express.json({ 
+    limit: '10mb',
+    verify: (req: any, res: any, buf: Buffer, encoding: string) => {
+      try {
+        JSON.parse(buf.toString());
+      } catch (error) {
+        console.error('JSON Parse Error:', {
+          error: error.message,
+          body: buf.toString(),
+          contentType: req.get('Content-Type'),
+          url: req.url,
+          method: req.method
+        });
+        throw new Error('Invalid JSON format');
+      }
+    }
+  }));
+
   // Health check endpoint for Docker
   app.get("/api/health", (_req: Request, res: Response) => {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
@@ -1406,8 +1426,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/store/cart", async (req, res) => {
     try {
       const cartData = insertCartItemSchema.parse(req.body);
-      const item = await storage.addToCart(cartData);
-      res.json(item);
+      
+      // Validate stock availability before adding to cart
+      const product = await storage.getProduct(cartData.productId);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      if (!product.isActive) {
+        return res.status(400).json({ message: "Product is not available" });
+      }
+
+      // Check if product has stock tracking enabled and validate availability
+      if (product.stock !== null) {
+        if (product.stock === 0) {
+          return res.status(400).json({ message: "Producto agotado" });
+        }
+
+        // Get current cart items for this user/session to check total quantity
+        const existingCartItems = await storage.getCartItems(cartData.userId, cartData.sessionId);
+        const existingItem = existingCartItems.find(item => item.productId === cartData.productId);
+        const currentCartQuantity = existingItem ? existingItem.quantity : 0;
+        const requestedQuantity = cartData.quantity || 1;
+        const totalQuantity = currentCartQuantity + requestedQuantity;
+
+        if (totalQuantity > product.stock) {
+          return res.status(400).json({ 
+            message: `Stock insuficiente. Disponible: ${product.stock}, En carrito: ${currentCartQuantity}, Solicitado: ${requestedQuantity}`,
+            availableStock: product.stock,
+            currentInCart: currentCartQuantity,
+            maxCanAdd: Math.max(0, product.stock - currentCartQuantity)
+          });
+        }
+      }
+
+      // Check if item already exists in cart
+      const existingCartItems = await storage.getCartItems(cartData.userId, cartData.sessionId);
+      const existingItem = existingCartItems.find(item => item.productId === cartData.productId);
+      
+      if (existingItem) {
+        // Update existing item quantity
+        const newQuantity = existingItem.quantity + (cartData.quantity || 1);
+        const updatedItem = await storage.updateCartItem(existingItem.id, newQuantity);
+        res.json(updatedItem);
+      } else {
+        // Create new cart item
+        const item = await storage.addToCart(cartData);
+        res.json(item);
+      }
     } catch (error) {
       res.status(400).json({ message: error instanceof Error ? error.message : "Invalid data" });
     }
@@ -1417,6 +1483,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { quantity } = req.body;
+
+      if (quantity <= 0) {
+        return res.status(400).json({ message: "Quantity must be greater than 0" });
+      }
+
+      // Get cart item to validate stock
+      const cartItems = await storage.getAllCartItems();
+      const cartItem = cartItems.find(item => item.id === id);
+      
+      if (!cartItem) {
+        return res.status(404).json({ message: "Cart item not found" });
+      }
+
+      // Validate stock availability
+      const product = await storage.getProduct(cartItem.productId);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      if (!product.isActive) {
+        return res.status(400).json({ message: "Product is not available" });
+      }
+
+      // Check stock availability
+      if (product.stock !== null && quantity > product.stock) {
+        return res.status(400).json({ 
+          message: `Stock insuficiente. Disponible: ${product.stock}, Solicitado: ${quantity}`,
+          availableStock: product.stock,
+          maxQuantity: product.stock
+        });
+      }
+
       const updatedItem = await storage.updateCartItem(id, quantity);
       if (!updatedItem) {
         return res.status(404).json({ message: "Cart item not found" });
@@ -1517,14 +1615,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/store/orders/:id/status", requireAuth, requireRole(['admin', 'superuser', 'staff']), async (req, res) => {
     try {
       const { id } = req.params;
+      
+      console.log('Received order status update request:', {
+        orderId: id,
+        headers: req.headers,
+        body: req.body,
+        bodyType: typeof req.body,
+        contentType: req.get('Content-Type')
+      });
+
+      // Validate request body exists and is an object
+      if (!req.body || typeof req.body !== 'object') {
+        console.error('Invalid request body:', req.body);
+        return res.status(400).json({ 
+          message: "Invalid request body. Expected JSON object.",
+          received: typeof req.body,
+          body: req.body
+        });
+      }
+
       const { status } = req.body;
+      
+      // Validate status field exists
+      if (!status) {
+        console.error('Missing status field in request body:', req.body);
+        return res.status(400).json({ 
+          message: "Status field is required",
+          received: req.body
+        });
+      }
+
+      // Validate status value
+      const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+      if (!validStatuses.includes(status)) {
+        console.error('Invalid status value:', status);
+        return res.status(400).json({ 
+          message: "Invalid order status",
+          validStatuses,
+          received: status
+        });
+      }
+      
+      console.log('Updating order status:', { orderId: id, status });
       const updatedOrder = await storage.updateOrderStatus(id, status);
+      
       if (!updatedOrder) {
+        console.error('Order not found:', id);
         return res.status(404).json({ message: "Order not found" });
       }
+      
+      console.log('Order status updated successfully:', updatedOrder);
       res.json(updatedOrder);
     } catch (error) {
-      res.status(400).json({ message: error instanceof Error ? error.message : "Invalid data" });
+      console.error("Error updating order status:", {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        orderId: req.params.id,
+        body: req.body
+      });
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Internal server error" 
+      });
     }
   });
 
@@ -2401,9 +2552,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/store/orders/:id", requireAuth, requireRole(['admin', 'superuser']), async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Ensure we have valid data
+      if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ message: "Invalid request body" });
+      }
+      
       const updateData = req.body;
+      
+      // Validate status if being updated
+      if (updateData.status) {
+        const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+        if (!validStatuses.includes(updateData.status)) {
+          return res.status(400).json({ message: "Invalid order status" });
+        }
+      }
 
       const updatedOrder = await storage.updateOrder(id, updateData);
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
       res.json(updatedOrder);
     } catch (error: any) {
       console.error("Error updating order:", error);

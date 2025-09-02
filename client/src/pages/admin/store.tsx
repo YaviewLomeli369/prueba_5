@@ -16,17 +16,17 @@ import { useToast } from "@/hooks/use-toast";
 
 import { 
   Package, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Eye, 
   ShoppingCart, 
   Users, 
   DollarSign, 
   TrendingUp, 
-  AlertTriangle, 
-  Edit, 
-  Trash2, 
-  Plus,
-  Eye,
-  Settings,
-  MoreVertical
+  Search, 
+  Filter,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,7 +48,7 @@ export default function AdminStore() {
 function AdminStoreContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [showProductForm, setShowProductForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -60,6 +60,8 @@ function AdminStoreContent() {
   const { data: stats = {} } = useQuery({
     queryKey: ["/api/store/stats"],
     queryFn: () => apiRequest("/api/store/stats", { method: "GET" }),
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
   });
 
   // Fetch products
@@ -98,6 +100,7 @@ function AdminStoreContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh stats
       toast({
         title: "Pedido actualizado",
         description: "El estado del pedido se ha actualizado correctamente",
@@ -124,7 +127,7 @@ function AdminStoreContent() {
     mutationFn: (data: any) => apiRequest("/api/store/products", { method: "POST", body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/products"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh stats
       handleCloseProductForm();
       toast({ title: "Producto creado exitosamente" });
     },
@@ -142,6 +145,7 @@ function AdminStoreContent() {
       apiRequest(`/api/store/products/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh stats
       handleCloseProductForm();
       toast({ title: "Producto actualizado exitosamente" });
     },
@@ -158,8 +162,11 @@ function AdminStoreContent() {
     mutationFn: (id: string) => apiRequest(`/api/store/products/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/products"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] });
-      toast({ title: "Producto eliminado exitosamente" });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh stats
+      toast({
+        title: "Producto eliminado",
+        description: "El producto ha sido eliminado correctamente",
+      });
     },
     onError: (error: any) => {
       toast({ 
@@ -182,6 +189,7 @@ function AdminStoreContent() {
     mutationFn: (data: any) => apiRequest("/api/store/categories", { method: "POST", body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh stats
       setShowCategoryForm(false);
       setSelectedCategory(null);
       toast({ title: "Categoría creada exitosamente" });
@@ -200,6 +208,7 @@ function AdminStoreContent() {
       apiRequest(`/api/store/categories/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh stats
       setShowCategoryForm(false);
       setSelectedCategory(null);
       toast({ title: "Categoría actualizada exitosamente" });
@@ -217,8 +226,11 @@ function AdminStoreContent() {
     mutationFn: (id: string) => apiRequest(`/api/store/categories/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/store/products"] });
-      toast({ title: "Categoría eliminada exitosamente" });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh stats
+      toast({
+        title: "Categoría eliminada",
+        description: "La categoría ha sido eliminada correctamente",
+      });
     },
     onError: (error: any) => {
       toast({ 
@@ -237,6 +249,7 @@ function AdminStoreContent() {
       apiRequest(`/api/store/products/${id}`, { method: "PUT", body: JSON.stringify({ images: [imageURL] }) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] }); // Refresh stats
       toast({ title: "Imagen actualizada exitosamente" });
       setUploadingImage(null);
       setTempImageUrl(null);
@@ -272,7 +285,7 @@ function AdminStoreContent() {
     if (result.successful && result.successful.length > 0) {
       const uploadedFile = result.successful[0];
       const imageURL = uploadedFile.uploadURL;
-      
+
       if (imageURL) {
         try {
           // Normalize the URL to get the proper object path
@@ -280,9 +293,9 @@ function AdminStoreContent() {
             method: "POST",
             body: JSON.stringify({ url: imageURL })
           });
-          
+
           const normalizedURL = response.normalizedUrl || imageURL;
-          
+
           if (selectedProduct?.id) {
             // Update existing product
             updateProductImageMutation.mutate({ id: selectedProduct.id, imageURL: normalizedURL });
@@ -320,9 +333,9 @@ function AdminStoreContent() {
   const handleProductSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     const categoryId = formData.get("categoryId") as string;
-    
+
     // Validate category selection
     if (!categoryId || categoryId === "") {
       toast({
@@ -332,7 +345,7 @@ function AdminStoreContent() {
       });
       return;
     }
-    
+
     const productData = {
       name: formData.get("name"),
       description: formData.get("description"),
@@ -363,7 +376,7 @@ function AdminStoreContent() {
   const handleCategorySubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     const categoryData = {
       name: formData.get("name"),
       description: formData.get("description"),
@@ -434,14 +447,30 @@ function AdminStoreContent() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Gestión de Tienda</h1>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowCategoryForm(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Categoría
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/store/stats"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/store/orders"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/store/products"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/store/customers"] });
+              toast({
+                title: "Estadísticas actualizadas",
+                description: "Los datos se han refrescado correctamente",
+              });
+            }}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualizar Stats
           </Button>
           <Button onClick={() => setShowProductForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Producto
+          </Button>
+          <Button variant="outline" onClick={() => setShowCategoryForm(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nueva Categoría
           </Button>
         </div>
       </div>
@@ -461,7 +490,7 @@ function AdminStoreContent() {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pedidos</CardTitle>
@@ -474,7 +503,7 @@ function AdminStoreContent() {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Clientes</CardTitle>
@@ -487,7 +516,7 @@ function AdminStoreContent() {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
@@ -755,7 +784,7 @@ function AdminStoreContent() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="shortDescription">Descripción Corta</Label>
               <Input
@@ -764,7 +793,7 @@ function AdminStoreContent() {
                 defaultValue={selectedProduct?.shortDescription}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="description">Descripción</Label>
               <Textarea
@@ -998,7 +1027,7 @@ function AdminStoreContent() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="categoryDescription">Descripción</Label>
               <Textarea
@@ -1049,7 +1078,7 @@ function AdminStoreContent() {
               Información completa del pedido
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedOrder && (
             <div className="space-y-6">
               {/* Order Status and Info */}
@@ -1069,7 +1098,7 @@ function AdminStoreContent() {
                     </Badge>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Pago</CardTitle>
@@ -1083,7 +1112,7 @@ function AdminStoreContent() {
                     </p>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Total</CardTitle>
@@ -1163,7 +1192,7 @@ function AdminStoreContent() {
                         </div>
                       </div>
                     ))}
-                    
+
                     <div className="border-t pt-4">
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Subtotal:</span>
@@ -1190,7 +1219,7 @@ function AdminStoreContent() {
                   <Edit className="w-4 h-4 mr-2" />
                   Editar Estado
                 </Button>
-                
+
                 <Button onClick={() => setShowOrderDetails(false)}>
                   Cerrar
                 </Button>
@@ -1209,7 +1238,7 @@ function AdminStoreContent() {
               Actualiza el estado y información del pedido
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedOrder && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -1259,7 +1288,7 @@ function AdminStoreContent() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowOrderEdit(false)}>
                   Cancelar

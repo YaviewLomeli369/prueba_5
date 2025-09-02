@@ -265,8 +265,8 @@ export default function BlogPost() {
 
               <div className="prose prose-lg max-w-none break-word">
                 <div 
-                  className="text-base leading-relaxed break-word"
-                  dangerouslySetInnerHTML={{ __html: post.content }} 
+                  className="text-gray-600 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: post.content }}
                 />
               </div>
             </CardContent>

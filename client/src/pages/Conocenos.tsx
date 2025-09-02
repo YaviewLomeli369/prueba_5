@@ -35,15 +35,20 @@ function Conocenos() {
 
       {/* Hero principal */}
       <AnimatedSection>
-        <section className="relative py-24 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 text-white text-center shadow-lg"
+        <section
+          className="relative py-24 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 text-white text-center shadow-lg"
           style={{
             backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0")`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
           }}
-          >
-          <div className="max-w-4xl mx-auto px-4">
+        >
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-black/50"></div>
+
+          {/* Contenido */}
+          <div className="relative max-w-4xl mx-auto px-4">
             <h1 className="text-5xl md:text-6xl font-extrabold mb-6 tracking-tight">
               Conócenos
             </h1>
@@ -53,6 +58,7 @@ function Conocenos() {
           </div>
         </section>
       </AnimatedSection>
+
 
       {/* Sección principal */}
       <AnimatedSection delay={0.1}>

@@ -157,7 +157,8 @@ export default function Reservations() {
 
       {/* Hero Section */}
       <AnimatedSection>
-        <section className="bg-primary text-white py-16"
+        <section
+          className="relative bg-primary text-white py-16"
           style={{
             backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0")`,
             backgroundSize: "cover",
@@ -165,17 +166,27 @@ export default function Reservations() {
             backgroundRepeat: "no-repeat",
           }}
         >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Calendar className="w-16 h-16 mx-auto mb-4" />
-          <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ fontFamily: appearance.fontFamily || 'inherit' }}>
-            Sistema de Reservas
-          </h1>
-          <p className="text-xl text-blue-100" style={{ fontFamily: appearance.fontFamily || 'inherit' }}>
-            Reserve su cita de manera fácil y rápida con nuestro sistema automatizado
-          </p>
-        </div>
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-black/50"></div>
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <Calendar className="w-16 h-16 mx-auto mb-4" />
+            <h1
+              className="text-4xl md:text-5xl font-bold mb-4"
+              style={{ fontFamily: appearance.fontFamily || "inherit" }}
+            >
+              Sistema de Reservas
+            </h1>
+            <p
+              className="text-xl text-blue-100"
+              style={{ fontFamily: appearance.fontFamily || "inherit" }}
+            >
+              Reserve su cita de manera fácil y rápida con nuestro sistema automatizado
+            </p>
+          </div>
         </section>
       </AnimatedSection>
+
 
       {/* Reservation Form */}
       <AnimatedSection delay={0.2}>

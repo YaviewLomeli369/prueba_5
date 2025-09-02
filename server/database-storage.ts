@@ -129,6 +129,7 @@ export interface IStorage {
   updateCartItem(id: string, quantity: number): Promise<CartItem | undefined>;
   removeFromCart(id: string): Promise<boolean>;
   clearCart(userId?: string, sessionId?: string): Promise<boolean>;
+  getAllCartItems(): Promise<CartItem[]>;
 
   // Orders
   getAllOrders(): Promise<Order[]>;
@@ -812,14 +813,29 @@ export class DatabaseStorage implements IStorage {
     if (!isDatabaseAvailable()) {
       throwDatabaseError('clearCart');
     }
-    const conditions = [];
-    if (userId) conditions.push(eq(schema.cartItems.userId, userId));
-    if (sessionId) conditions.push(eq(schema.cartItems.sessionId, sessionId));
 
-    if (conditions.length === 0) return false;
+    const whereConditions = [];
+    if (userId) {
+      whereConditions.push(eq(schema.cartItems.userId, userId));
+    }
+    if (sessionId) {
+      whereConditions.push(eq(schema.cartItems.sessionId, sessionId));
+    }
 
-    const result = await db!.delete(schema.cartItems).where(or(...conditions));
+    if (whereConditions.length === 0) {
+      return false;
+    }
+
+    const result = await db!.delete(schema.cartItems)
+      .where(or(...whereConditions));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async getAllCartItems(): Promise<CartItem[]> {
+    if (!isDatabaseAvailable()) {
+      throwDatabaseError('getAllCartItems');
+    }
+    return await db!.select().from(schema.cartItems);
   }
 
   // Orders
@@ -877,18 +893,80 @@ export class DatabaseStorage implements IStorage {
     if (!isDatabaseAvailable()) {
       throwDatabaseError('updateOrder');
     }
-    const [updatedOrder] = await db!.update(schema.orders)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(schema.orders.id, id))
-      .returning();
-    return updatedOrder;
+    
+    console.log('Database updateOrder called:', { 
+      id, 
+      updates,
+      updatesType: typeof updates,
+      updatesKeys: Object.keys(updates)
+    });
+    
+    try {
+      // Validate the order exists first
+      const existingOrder = await db!.select()
+        .from(schema.orders)
+        .where(eq(schema.orders.id, id))
+        .limit(1);
+        
+      if (existingOrder.length === 0) {
+        console.error('Order not found in database during update:', id);
+        return undefined;
+      }
+      
+      console.log('Order found, proceeding with update');
+      
+      const [updatedOrder] = await db!.update(schema.orders)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(schema.orders.id, id))
+        .returning();
+        
+      console.log('Order updated successfully:', {
+        id: updatedOrder.id,
+        oldStatus: existingOrder[0].status,
+        newStatus: updatedOrder.status
+      });
+      
+      return updatedOrder;
+    } catch (error) {
+      console.error('Error in updateOrder database operation:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        id,
+        updates
+      });
+      throw error;
+    }
   }
 
   async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
     if (!isDatabaseAvailable()) {
       throwDatabaseError('updateOrderStatus');
     }
-    return await this.updateOrder(id, { status });
+    
+    console.log('Database updateOrderStatus called:', { id, status });
+    
+    try {
+      // First check if order exists
+      const existingOrder = await this.getOrder(id);
+      if (!existingOrder) {
+        console.error('Order not found in database:', id);
+        return undefined;
+      }
+      
+      console.log('Existing order found:', {
+        id: existingOrder.id,
+        currentStatus: existingOrder.status,
+        newStatus: status
+      });
+      
+      const result = await this.updateOrder(id, { status });
+      console.log('Order status update result:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('Error in updateOrderStatus:', error);
+      throw error;
+    }
   }
 
   async deleteOrder(id: string): Promise<boolean> {

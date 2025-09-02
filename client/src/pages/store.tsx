@@ -73,12 +73,32 @@ export default function Store() {
       const product = products?.find(p => p.id === productId);
       if (!product) throw new Error("Producto no encontrado");
       
+      // Check if product is active
+      if (!product.isActive) {
+        throw new Error("El producto no está disponible");
+      }
+      
+      // Validate stock if tracking is enabled
+      if (product.stock !== null) {
+        const currentInCart = cart.find(item => item.product.id === productId)?.quantity || 0;
+        const totalRequested = currentInCart + quantity;
+        
+        if (product.stock === 0) {
+          throw new Error("Producto agotado");
+        }
+        
+        if (totalRequested > product.stock) {
+          throw new Error(`Stock insuficiente. Disponible: ${product.stock}, En carrito: ${currentInCart}, Máximo que puedes agregar: ${Math.max(0, product.stock - currentInCart)}`);
+        }
+      }
+      
       setCart(prev => {
         const existing = prev.find(item => item.product.id === productId);
         if (existing) {
+          const newQuantity = existing.quantity + quantity;
           return prev.map(item =>
             item.product.id === productId
-              ? { ...item, quantity: item.quantity + quantity }
+              ? { ...item, quantity: newQuantity }
               : item
           );
         }
@@ -96,7 +116,11 @@ export default function Store() {
     },
     onError: (error) => {
       if (isMountedRef.current && !isNavigating) {
-        console.error('Cart error:', error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "No se pudo agregar el producto",
+          variant: "destructive"
+        });
       }
     }
   });
@@ -212,10 +236,25 @@ export default function Store() {
   const addToCartFromModal = useCallback(() => {
     if (!selectedProduct || !isMountedRef.current || isNavigating) return;
     
+    // Additional validation before calling mutation
+    if (selectedProduct.stock !== null) {
+      const currentInCart = cart.find(item => item.product.id === selectedProduct.id)?.quantity || 0;
+      const totalRequested = currentInCart + productQuantity;
+      
+      if (totalRequested > selectedProduct.stock) {
+        toast({
+          title: "Stock insuficiente",
+          description: `Solo puedes agregar ${Math.max(0, selectedProduct.stock - currentInCart)} unidades más`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     addToCartMutation.mutate({ productId: selectedProduct.id, quantity: productQuantity });
     setSelectedProduct(null);
     setProductQuantity(1);
-  }, [selectedProduct, productQuantity, addToCartMutation, isNavigating]);
+  }, [selectedProduct, productQuantity, addToCartMutation, isNavigating, cart, toast]);
 
   const handleCheckout = useCallback(() => {
     if (cart.length === 0 || !isMountedRef.current || isNavigating) return;
@@ -248,10 +287,31 @@ export default function Store() {
       removeFromCart(productId);
       return;
     }
+
+    const product = products?.find(p => p.id === productId);
+    if (!product) {
+      toast({
+        title: "Error",
+        description: "Producto no encontrado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate stock if tracking is enabled
+    if (product.stock !== null && newQuantity > product.stock) {
+      toast({
+        title: "Stock insuficiente",
+        description: `Solo hay ${product.stock} unidades disponibles`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setCart(prev => prev.map(item =>
       item.product.id === productId ? { ...item, quantity: newQuantity } : item
     ));
-  }, [removeFromCart, isNavigating]);
+  }, [removeFromCart, isNavigating, products, toast]);
 
   // ✅ EFFECTS - MUST BE AFTER ALL HOOKS
   useEffect(() => {
@@ -386,7 +446,28 @@ export default function Store() {
                               <Minus className="h-3 w-3" />
                             </Button>
                             <span className="w-8 text-center">{item.quantity}</span>
-                            <Button variant="outline" size="sm" onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)} disabled={isNavigating}>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                if (!isNavigating) {
+                                  const product = products?.find(p => p.id === item.product.id);
+                                  if (product?.stock !== null && item.quantity >= product.stock) {
+                                    toast({
+                                      title: "Stock insuficiente",
+                                      description: `Solo hay ${product.stock} unidades disponibles`,
+                                      variant: "destructive"
+                                    });
+                                    return;
+                                  }
+                                  updateCartQuantity(item.product.id, item.quantity + 1);
+                                }
+                              }} 
+                              disabled={isNavigating || (() => {
+                                const product = products?.find(p => p.id === item.product.id);
+                                return product?.stock !== null && item.quantity >= product.stock;
+                              })()}
+                            >
                               <Plus className="h-3 w-3" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.product.id)} disabled={isNavigating}>
@@ -554,10 +635,28 @@ export default function Store() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => !isNavigating &&
-                          setProductQuantity(selectedProduct.stock !== null ? Math.min(productQuantity + 1, selectedProduct.stock) : productQuantity + 1)
-                        }
-                        disabled={isNavigating || (selectedProduct.stock !== null && productQuantity >= selectedProduct.stock)}
+                        onClick={() => {
+                          if (!isNavigating && selectedProduct.stock !== null) {
+                            const currentInCart = cart.find(item => item.product.id === selectedProduct.id)?.quantity || 0;
+                            const maxCanAdd = Math.max(0, selectedProduct.stock - currentInCart);
+                            if (productQuantity < maxCanAdd) {
+                              setProductQuantity(productQuantity + 1);
+                            } else {
+                              toast({
+                                title: "Límite alcanzado",
+                                description: `Ya tienes ${currentInCart} en el carrito. Stock total: ${selectedProduct.stock}`,
+                                variant: "destructive"
+                              });
+                            }
+                          } else if (!isNavigating && selectedProduct.stock === null) {
+                            setProductQuantity(productQuantity + 1);
+                          }
+                        }}
+                        disabled={isNavigating || (selectedProduct.stock !== null && (() => {
+                          const currentInCart = cart.find(item => item.product.id === selectedProduct.id)?.quantity || 0;
+                          const maxCanAdd = Math.max(0, selectedProduct.stock - currentInCart);
+                          return productQuantity >= maxCanAdd;
+                        })())}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>

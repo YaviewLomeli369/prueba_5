@@ -9,31 +9,50 @@ async function throwIfResNotOk(res: Response) {
 
 export async function apiRequest(
   url: string,
-  options: {
-    method: string;
-    body?: string;
-  }
+  options: RequestInit = {}
 ): Promise<any> {
   const token = localStorage.getItem('auth_token');
   const headers: Record<string, string> = {};
-  
-  if (options.body) {
+
+  // Always set Content-Type to application/json for requests with body
+  if (options.body && options.method !== 'GET') {
     headers["Content-Type"] = "application/json";
   }
-  
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    method: options.method,
+  // Ensure body is properly stringified if it's an object
+  let body = options.body;
+  if (body && typeof body === 'object' && !(body instanceof FormData)) {
+    try {
+      body = JSON.stringify(body);
+    } catch (error) {
+      console.error('Error stringifying request body:', error);
+      throw new Error('Invalid request body format');
+    }
+  }
+
+  console.log('Making API request:', {
+    url,
+    method: options.method || 'GET',
     headers,
-    body: options.body,
-    credentials: "include",
+    bodyType: typeof body,
+    body: body ? (typeof body === 'string' ? body : 'FormData') : undefined
   });
 
-  await throwIfResNotOk(res);
-  return res.json();
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...headers,
+      ...options.headers,
+    },
+    body,
+  });
+
+  await throwIfResNotOk(response);
+  return await response.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -44,7 +63,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const token = localStorage.getItem('auth_token');
     const headers: Record<string, string> = {};
-    
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
