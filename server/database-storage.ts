@@ -129,6 +129,7 @@ export interface IStorage {
   updateCartItem(id: string, quantity: number): Promise<CartItem | undefined>;
   removeFromCart(id: string): Promise<boolean>;
   clearCart(userId?: string, sessionId?: string): Promise<boolean>;
+  getAllCartItems(): Promise<CartItem[]>;
 
   // Orders
   getAllOrders(): Promise<Order[]>;
@@ -812,14 +813,29 @@ export class DatabaseStorage implements IStorage {
     if (!isDatabaseAvailable()) {
       throwDatabaseError('clearCart');
     }
-    const conditions = [];
-    if (userId) conditions.push(eq(schema.cartItems.userId, userId));
-    if (sessionId) conditions.push(eq(schema.cartItems.sessionId, sessionId));
 
-    if (conditions.length === 0) return false;
+    const whereConditions = [];
+    if (userId) {
+      whereConditions.push(eq(schema.cartItems.userId, userId));
+    }
+    if (sessionId) {
+      whereConditions.push(eq(schema.cartItems.sessionId, sessionId));
+    }
 
-    const result = await db!.delete(schema.cartItems).where(or(...conditions));
+    if (whereConditions.length === 0) {
+      return false;
+    }
+
+    const result = await db!.delete(schema.cartItems)
+      .where(or(...whereConditions));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async getAllCartItems(): Promise<CartItem[]> {
+    if (!isDatabaseAvailable()) {
+      throwDatabaseError('getAllCartItems');
+    }
+    return await db!.select().from(schema.cartItems);
   }
 
   // Orders
