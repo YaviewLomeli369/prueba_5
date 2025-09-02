@@ -1,101 +1,121 @@
-import { useState, useMemo } from "react";
-import React from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import React, { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import AnimatedSection from "@/components/AnimatedSection";
+import { SEOHead } from "@/components/seo-head";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Clock, 
-  Send,
-  Facebook,
-  Instagram,
-  MessageSquare
-} from "lucide-react";
+import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { ContactInfo, SiteConfig } from "@shared/schema";
+import type { SiteConfig } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import AnimatedSection from "@/components/AnimatedSection";
 
 export default function Contact() {
+  // ✅ ALL HOOKS AT THE TOP
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     subject: "",
     message: "",
   });
-  const { toast } = useToast();
 
-  const { data: config } = useQuery<SiteConfig>({
+  // ✅ QUERIES
+  const { data: config, isLoading: configLoading } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
-  const appearance = useMemo(() => {
-    const configData = config?.config as any;
-    return configData?.appearance || {};
-  }, [config]);
-
-  const { data: contactInfo, isLoading, error } = useQuery<ContactInfo>({
+  const { data: contactInfo } = useQuery({
     queryKey: ["/api/contact/info"],
-    queryFn: async () => {
-      const res = await fetch("/api/contact/info");
-      if (!res.ok) {
-        throw new Error("Failed to fetch contact info");
-      }
-      return await res.json();
-    },
-    retry: false,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
-  // Debug logging
-  React.useEffect(() => {
-    if (error) {
-      console.error("Contact Info Query Error:", error);
-    }
-    if (contactInfo) {
-      console.log("Contact Info Data:", contactInfo);
-    }
-  }, [error, contactInfo]);
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      return await apiRequest("/api/contact/messages", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-    },
+  // ✅ MUTATIONS
+  const submitMutation = useMutation({
+    mutationFn: (data: typeof formData) => 
+      apiRequest("/api/contact", { method: "POST", body: JSON.stringify(data) }),
     onSuccess: () => {
-      setFormData({ name: "", email: "", subject: "", message: "" });
       toast({
-        title: "¡Mensaje enviado!",
+        title: "Mensaje enviado",
         description: "Gracias por contactarnos. Te responderemos pronto.",
       });
+      setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
-        variant: "destructive",
         title: "Error",
-        description: "No se pudo enviar el mensaje. Inténtalo de nuevo.",
+        description: error.message || "No se pudo enviar el mensaje. Intenta de nuevo.",
+        variant: "destructive",
       });
     },
   });
 
+  // ✅ COMPUTED VALUES
+  const { appearance, isContactEnabled } = useMemo(() => {
+    if (!config) return { appearance: {}, isContactEnabled: false };
+
+    const configData = config?.config as any;
+    const modules = configData?.frontpage?.modulos || {};
+    const appearance = configData?.appearance || {};
+
+    return {
+      appearance,
+      isContactEnabled: modules.contacto?.activo !== false,
+    };
+  }, [config]);
+
+  // ✅ HANDLERS
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessageMutation.mutate(formData);
+    if (formData.name && formData.email && formData.message) {
+      submitMutation.mutate(formData);
+    }
   };
 
-  const handleInputChange = (field: keyof typeof formData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // ✅ LOADING STATE - AFTER ALL HOOKS
+  if (configLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-16 text-center">
+          <p>Cargando información de contacto...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!isContactEnabled) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <AnimatedSection>
+          <div className="container mx-auto px-4 py-16 text-center">
+            <h1 className="text-4xl font-bold mb-4">Contacto</h1>
+            <p className="text-xl text-muted-foreground">
+              El módulo de contacto no está disponible en este momento.
+            </p>
+          </div>
+        </AnimatedSection>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -106,288 +126,156 @@ export default function Contact() {
         fontFamily: appearance.fontFamily || "inherit",
       }}
     >
+      <SEOHead title="Contacto - Ponte en contacto con nosotros" description="¿Tienes preguntas? Contáctanos y te ayudaremos con lo que necesites." />
       <Navbar />
-      
-      <AnimatedSection>
-        <div className="container mx-auto px-4 py-16">
-          {/* Header */}
+
+      <div className="container mx-auto px-4 py-16">
+        <AnimatedSection>
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Contáctanos
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              ¿Tienes alguna pregunta? Nos encantaría ayudarte
+            <h1 className="text-4xl font-bold mb-4" style={{ color: appearance.textColor || "#111111" }}>Contacto</h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              ¿Tienes preguntas? Contáctanos y te ayudaremos con lo que necesites.
             </p>
           </div>
+        </AnimatedSection>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Contact Form */}
-            <AnimatedSection delay={0.2}>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Envíanos un Mensaje
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Nombre *</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      value={formData.name}
-                      onChange={handleInputChange("name")}
-                      required
-                      placeholder="Tu nombre completo"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange("email")}
-                      required
-                      placeholder="tu@email.com"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="subject">Asunto</Label>
-                  <Input
-                    id="subject"
-                    type="text"
-                    value={formData.subject}
-                    onChange={handleInputChange("subject")}
-                    placeholder="¿De qué quieres hablarnos?"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="message">Mensaje *</Label>
-                  <Textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={handleInputChange("message")}
-                    required
-                    rows={6}
-                    placeholder="Escribe tu mensaje aquí..."
-                  />
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={sendMessageMutation.isPending}
-                >
-                  {sendMessageMutation.isPending ? (
-                    "Enviando..."
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Enviar Mensaje
-                    </>
-                  )}
-                </Button>
-              </form>
-                </CardContent>
-              </Card>
-            </AnimatedSection>
-
-            {/* Contact Information */}
-            <AnimatedSection delay={0.4}>
-              <div className="space-y-6">
-                <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Formulario */}
+          <AnimatedSection delay={0.2}>
+            <Card>
               <CardHeader>
-                <CardTitle>Información de Contacto</CardTitle>
+                <CardTitle>Envíanos un mensaje</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {isLoading ? (
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Nombre *</label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => handleInputChange("name", e.target.value)}
+                        placeholder="Tu nombre completo"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Email *</label>
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
+                        placeholder="tu@email.com"
+                        required
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    {contactInfo?.phone && (
-                      <div className="flex items-start gap-3">
-                        <Phone className="h-5 w-5 text-primary mt-1" />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">Teléfono</h3>
-                          <p className="text-gray-600">{contactInfo.phone}</p>
-                        </div>
-                      </div>
-                    )}
 
-                    {contactInfo?.email && (
-                      <div className="flex items-start gap-3">
-                        <Mail className="h-5 w-5 text-primary mt-1" />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">Email</h3>
-                          <p className="text-gray-600">{contactInfo.email}</p>
-                        </div>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Teléfono</label>
+                      <Input
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange("phone", e.target.value)}
+                        placeholder="Tu número de teléfono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Asunto</label>
+                      <Input
+                        value={formData.subject}
+                        onChange={(e) => handleInputChange("subject", e.target.value)}
+                        placeholder="Asunto del mensaje"
+                      />
+                    </div>
+                  </div>
 
-                    {contactInfo?.address && (
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-5 w-5 text-primary mt-1" />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">Dirección</h3>
-                          <p className="text-gray-600">{contactInfo.address}</p>
-                        </div>
-                      </div>
-                    )}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Mensaje *</label>
+                    <Textarea
+                      value={formData.message}
+                      onChange={(e) => handleInputChange("message", e.target.value)}
+                      placeholder="Escribe tu mensaje aquí..."
+                      rows={5}
+                      required
+                    />
+                  </div>
 
-                    {contactInfo?.hours && (
-                      <div className="flex items-start gap-3">
-                        <Clock className="h-5 w-5 text-primary mt-1" />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">Horarios</h3>
-                          <p className="text-gray-600 whitespace-pre-line">{contactInfo.hours}</p>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={submitMutation.isPending}
+                  >
+                    {submitMutation.isPending ? "Enviando..." : "Enviar mensaje"}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
+          </AnimatedSection>
 
-            {/* Social Media */}
-            {contactInfo?.socialLinks && 
-             typeof contactInfo.socialLinks === 'object' && 
-             Object.values(contactInfo.socialLinks).some(link => link && link !== '') && (
+          {/* Información de contacto */}
+          <AnimatedSection delay={0.4}>
+            <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Síguenos en Redes Sociales</CardTitle>
+                  <CardTitle>Información de contacto</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-3">
-                    {(contactInfo.socialLinks as any).facebook && (contactInfo.socialLinks as any).facebook !== '' && (
-                      <a
-                        href={(contactInfo.socialLinks as any).facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Facebook className="h-4 w-4" />
-                        Facebook
-                      </a>
-                    )}
-                    {(contactInfo.socialLinks as any).instagram && (contactInfo.socialLinks as any).instagram !== '' && (
-                      <a
-                        href={(contactInfo.socialLinks as any).instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
-                      >
-                        <Instagram className="h-4 w-4" />
-                        Instagram
-                      </a>
-                    )}
-                    {(contactInfo.socialLinks as any).twitter && (contactInfo.socialLinks as any).twitter !== '' && (
-                      <a
-                        href={(contactInfo.socialLinks as any).twitter}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500 transition-colors"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        Twitter
-                      </a>
-                    )}
-                    {(contactInfo.socialLinks as any).linkedin && (contactInfo.socialLinks as any).linkedin !== '' && (
-                      <a
-                        href={(contactInfo.socialLinks as any).linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        LinkedIn
-                      </a>
-                    )}
-                    {(contactInfo.socialLinks as any).youtube && (contactInfo.socialLinks as any).youtube !== '' && (
-                      <a
-                        href={(contactInfo.socialLinks as any).youtube}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        YouTube
-                      </a>
-                    )}
-                    {(contactInfo.socialLinks as any).tiktok && (contactInfo.socialLinks as any).tiktok !== '' && (
-                      <a
-                        href={(contactInfo.socialLinks as any).tiktok}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        TikTok
-                      </a>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Response Time Notice */}
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-blue-900 mb-2">
-                  Tiempo de Respuesta
-                </h3>
-                <p className="text-blue-700 text-sm">
-                  Normalmente respondemos dentro de las 24 horas. Para consultas urgentes, 
-                  puedes contactarnos directamente por teléfono.
-                </p>
-              </CardContent>
-              </Card>
-              </div>
-            </AnimatedSection>
-          </div>
-
-          {/* Map Section */}
-          {contactInfo?.address && (
-            <AnimatedSection delay={0.6}>
-              <Card className="mt-12">
-                <CardHeader>
-                  <CardTitle>Nuestra Ubicación</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {/* <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden"> */}
-                    {contactInfo.mapsUrl ? (
-                      <iframe
-                        src={contactInfo.mapsUrl}
-                        title="Ubicación"
-                        className="w-full h-full border-0"
-                        allowFullScreen
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                      ></iframe>
-                    ) : (
-                      <div className="text-center text-gray-500">
-                        <MapPin className="h-12 w-12 mx-auto mb-2" />
-                        <p className="font-medium">{contactInfo.address}</p>
-                        <p className="text-sm mt-2">Mapa interactivo disponible próximamente</p>
+                <CardContent className="space-y-4">
+                  {contactInfo?.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Email</p>
+                        <p className="text-muted-foreground">{contactInfo.email}</p>
                       </div>
-                    )}
-                  {/* </div> */}
+                    </div>
+                  )}
+
+                  {contactInfo?.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Teléfono</p>
+                        <p className="text-muted-foreground">{contactInfo.phone}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {contactInfo?.address && (
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Dirección</p>
+                        <p className="text-muted-foreground">{contactInfo.address}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {contactInfo?.hours && (
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Horarios</p>
+                        <p className="text-muted-foreground">{contactInfo.hours}</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            </AnimatedSection>
-          )}
+
+              {/* Mapa o información adicional */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-2">¿Cómo podemos ayudarte?</h3>
+                  <p className="text-muted-foreground">
+                    Estamos aquí para responder tus preguntas y ayudarte con cualquier consulta.
+                    No dudes en contactarnos por cualquier medio.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </AnimatedSection>
         </div>
-      </AnimatedSection>
+      </div>
 
       <Footer />
     </div>

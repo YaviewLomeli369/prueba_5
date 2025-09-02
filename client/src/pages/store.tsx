@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Navbar } from "@/components/layout/navbar";
@@ -24,16 +24,14 @@ import { useToast } from "@/hooks/use-toast";
 import AnimatedSection from "@/components/AnimatedSection";
 import { Spinner } from "@/components/ui/spinner";
 
-// Generate unique component key to force clean re-renders
-const COMPONENT_KEY = `store-${Date.now()}`;
-
 export default function Store() {
-  // Navigation and lifecycle management
+  // ✅ ALL HOOKS MUST BE AT THE TOP - NO CONDITIONAL EXECUTION
   const [location, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isMountedRef = useRef(true);
-  const cleanupRef = useRef<(() => void) | null>(null);
   
-  // Core states with proper initialization
+  // Core states
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -41,99 +39,31 @@ export default function Store() {
   const [productQuantity, setProductQuantity] = useState(1);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [cart, setCart] = useState<Array<{ product: Product; quantity: number }>>([]);
-  
-  // Component state tracking
   const [isNavigating, setIsNavigating] = useState(false);
-  const [componentMounted, setComponentMounted] = useState(false);
-  
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Comprehensive cleanup function
-  const performCleanup = useCallback(() => {
-    if (!isMountedRef.current) return;
-    
-    try {
-      // Reset all local states
-      setSelectedCategory("all");
-      setSearchTerm("");
-      setIsCartOpen(false);
-      setSelectedProduct(null);
-      setProductQuantity(1);
-      setFavorites(new Set());
-      setIsNavigating(false);
-      
-      // Clear any pending timeouts or intervals
-      const highestTimeoutId = setTimeout(() => {}, 0);
-      for (let i = 0; i < highestTimeoutId; i++) {
-        clearTimeout(i);
-      }
-      
-      // Force close any open dialogs by dispatching escape
-      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' });
-      document.dispatchEvent(escapeEvent);
-      
-      // Clear any body classes that might have been added by modals
-      document.body.classList.remove('modal-open', 'overflow-hidden');
-      document.body.style.overflow = '';
-      
-    } catch (error) {
-      console.warn('Cleanup error:', error);
-    }
-  }, []);
-
-  // Navigation interceptor with proper state management
-  const handleNavigation = useCallback((href: string, event?: Event) => {
-    if (!isMountedRef.current) return;
-    
-    try {
-      setIsNavigating(true);
-      performCleanup();
-      
-      // Small delay to ensure state cleanup before navigation
-      const timeoutId = setTimeout(() => {
-        if (isMountedRef.current) {
-          setLocation(href);
-        }
-      }, 50);
-      
-      return () => clearTimeout(timeoutId);
-    } catch (error) {
-      console.error('Navigation error:', error);
-      // Fallback to immediate navigation
-      setLocation(href);
-    }
-  }, [setLocation, performCleanup]);
-
-  // Enhanced queries with proper error handling and mobile optimization
-  const { data: config } = useQuery<SiteConfig>({
+  // ✅ FETCH DATA WITH PROPER ERROR HANDLING AND MOBILE OPTIMIZATION
+  const { data: config, isLoading: configLoading } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
     retry: 1,
-    enabled: componentMounted && !isNavigating,
   });
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["/api/store/products"],
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
     retry: 1,
-    enabled: componentMounted && !isNavigating,
   });
 
   const { data: categories } = useQuery<ProductCategory[]>({
     queryKey: ["/api/store/categories"],
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
     retry: 1,
-    enabled: componentMounted && !isNavigating,
   });
 
-  // Enhanced cart mutation with proper error handling
+  // ✅ MUTATIONS
   const addToCartMutation = useMutation({
     mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
       if (!isMountedRef.current || isNavigating) {
@@ -171,7 +101,7 @@ export default function Store() {
     }
   });
 
-  // Store configuration with safe access
+  // ✅ COMPUTED VALUES - SAFE ACCESS WITH EARLY RETURNS
   const storeConfig = useMemo(() => {
     if (!config) return { isStoreEnabled: false, appearance: {} };
     
@@ -186,7 +116,12 @@ export default function Store() {
     };
   }, [config]);
 
-  // Enhanced product filtering with performance optimization
+  const { appearance } = storeConfig;
+  
+  const availableCategories = useMemo(() => {
+    return ["all", ...(categories?.map(cat => cat.id) || [])];
+  }, [categories]);
+
   const filteredProducts = useMemo(() => {
     if (!products || isNavigating) return [];
     
@@ -202,7 +137,50 @@ export default function Store() {
     });
   }, [products, selectedCategory, searchTerm, isNavigating]);
 
-  // Enhanced helper functions with safety checks
+  const cartTotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + ((item.product.price / 100) * item.quantity), 0);
+  }, [cart]);
+
+  // ✅ CALLBACK FUNCTIONS
+  const performCleanup = useCallback(() => {
+    if (!isMountedRef.current) return;
+    
+    try {
+      setSelectedCategory("all");
+      setSearchTerm("");
+      setIsCartOpen(false);
+      setSelectedProduct(null);
+      setProductQuantity(1);
+      setFavorites(new Set());
+      setIsNavigating(false);
+      
+      // Clear any body classes that might have been added by modals
+      document.body.classList.remove('modal-open', 'overflow-hidden');
+      document.body.style.overflow = '';
+      
+    } catch (error) {
+      console.warn('Cleanup error:', error);
+    }
+  }, []);
+
+  const handleNavigation = useCallback((href: string) => {
+    if (!isMountedRef.current) return;
+    
+    try {
+      setIsNavigating(true);
+      performCleanup();
+      
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          setLocation(href);
+        }
+      }, 50);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      setLocation(href);
+    }
+  }, [setLocation, performCleanup]);
+
   const toggleFavorite = useCallback((productId: string) => {
     if (!isMountedRef.current || isNavigating) return;
     
@@ -239,18 +217,12 @@ export default function Store() {
     setProductQuantity(1);
   }, [selectedProduct, productQuantity, addToCartMutation, isNavigating]);
 
-  const cartTotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + ((item.product.price / 100) * item.quantity), 0);
-  }, [cart]);
-
   const handleCheckout = useCallback(() => {
     if (cart.length === 0 || !isMountedRef.current || isNavigating) return;
     
     try {
       localStorage.setItem('checkoutItems', JSON.stringify(cart));
       setIsCartOpen(false);
-      
-      // Use navigation handler for consistent behavior
       handleNavigation("/checkout");
     } catch (error) {
       console.error('Checkout error:', error);
@@ -281,13 +253,9 @@ export default function Store() {
     ));
   }, [removeFromCart, isNavigating]);
 
-  // Component lifecycle management
+  // ✅ EFFECTS - MUST BE AFTER ALL HOOKS
   useEffect(() => {
     isMountedRef.current = true;
-    setComponentMounted(true);
-    
-    // Register cleanup function
-    cleanupRef.current = performCleanup;
     
     return () => {
       isMountedRef.current = false;
@@ -295,7 +263,6 @@ export default function Store() {
     };
   }, [performCleanup]);
 
-  // Navigation event listeners with comprehensive cleanup
   useEffect(() => {
     const handlePopState = () => {
       if (isMountedRef.current) {
@@ -313,42 +280,32 @@ export default function Store() {
       }
     };
 
-    // Enhanced navigation detection
-    const handleLocationChange = () => {
-      if (isMountedRef.current && location !== '/store') {
-        performCleanup();
-      }
-    };
-
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Wouter-specific navigation detection
-    const checkLocationChange = setInterval(handleLocationChange, 100);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearInterval(checkLocationChange);
     };
-  }, [location, performCleanup]);
+  }, [performCleanup]);
 
-  // Category validation with proper loading states
   useEffect(() => {
-    if (products && categories && componentMounted) {
+    if (products && categories) {
       const validCategories = categories.map(cat => cat.id);
       if (!validCategories.includes(selectedCategory) && selectedCategory !== "all") {
         setSelectedCategory("all");
       }
     }
-  }, [products, categories, selectedCategory, componentMounted]);
+  }, [products, categories, selectedCategory]);
 
-  // Loading states with proper error handling
-  if (!componentMounted || productsLoading || !storeConfig) {
+  // ✅ LOADING AND ERROR STATES - AFTER ALL HOOKS
+  const isLoading = configLoading || productsLoading;
+
+  if (isLoading) {
     return (
-      <div key={`${COMPONENT_KEY}-loading`} className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background">
         <Navbar />
         <AnimatedSection>
           <div className="container mx-auto px-4 py-16 flex flex-col items-center space-y-4">
@@ -364,10 +321,9 @@ export default function Store() {
     );
   }
 
-  // Module disabled state
   if (!storeConfig.isStoreEnabled) {
     return (
-      <div key={`${COMPONENT_KEY}-disabled`} className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background">
         <Navbar />
         <AnimatedSection>
           <div className="container mx-auto px-4 py-16 text-center">
@@ -380,15 +336,8 @@ export default function Store() {
     );
   }
 
-  const { appearance } = storeConfig;
-  const availableCategories = useMemo(() => 
-    ["all", ...(categories?.map(cat => cat.id) || [])], 
-    [categories]
-  );
-
   return (
     <div 
-      key={`${COMPONENT_KEY}-main`}
       className="min-h-screen bg-background"
       style={{
         backgroundColor: appearance.backgroundColor || "inherit",
@@ -493,7 +442,7 @@ export default function Store() {
         <AnimatedSection delay={0.4}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product, index) => (
-              <AnimatedSection key={`${product.id}-${COMPONENT_KEY}`} delay={0.1 * (index % 8)}>
+              <AnimatedSection key={product.id} delay={0.1 * (index % 8)}>
                 <Card
                   className="h-full overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer"
                   onClick={() => !isNavigating && openProductModal(product)}
