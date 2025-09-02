@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -60,19 +59,19 @@ export function Navbar() {
   // Enhanced navigation handler with proper cleanup
   const handleNavigation = useCallback((href: string, closeMenu = true) => {
     if (isNavigatingRef.current) return;
-    
+
     try {
       isNavigatingRef.current = true;
-      
+
       // Close mobile menu immediately
       if (closeMenu) {
         setIsMobileMenuOpen(false);
       }
-      
+
       // Clear any modal states before navigation
       document.body.classList.remove('modal-open', 'overflow-hidden');
       document.body.style.overflow = '';
-      
+
       // Handle navigation
       if (href === location) {
         // If same route, force refresh by adding timestamp
@@ -83,7 +82,7 @@ export function Navbar() {
       } else {
         setLocation(href);
       }
-      
+
     } catch (error) {
       console.error('Navigation error:', error);
       // Fallback to direct navigation
@@ -127,8 +126,8 @@ export function Navbar() {
   ), [handleNavigation]);
 
   return (
-    <nav 
-      className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50" 
+    <nav
+      className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50"
       key={navRef.current}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -264,7 +263,7 @@ export function Navbar() {
                       {item.label}
                     </NavLink>
                   ))}
-                  
+
                   <div className="border-t pt-4">
                     {isAuthenticated ? (
                       <div className="space-y-2">
