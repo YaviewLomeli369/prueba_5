@@ -69,57 +69,35 @@ function Router() {
     retry: 1, // Reduce retry attempts
   });
 
-  // Enhanced mobile navigation cleanup
+  // Enhanced navigation cleanup for mobile
   useEffect(() => {
-    const isMobile = () => window.innerWidth <= 768;
-    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
+        // Clear any pending states when page becomes hidden
         document.body.classList.remove('modal-open', 'overflow-hidden');
         document.body.style.overflow = '';
-        document.body.style.touchAction = 'auto';
       }
     };
 
     const handleBeforeUnload = () => {
+      // Final cleanup before page unload
       document.body.style.overflow = '';
-      document.body.style.touchAction = 'auto';
       sessionStorage.removeItem('navigationState');
     };
 
     const handleTouchStart = () => {
-      if (isMobile()) {
-        document.body.style.touchAction = 'auto';
-      }
+      // Ensure touch events work properly on mobile
+      document.body.style.touchAction = 'auto';
     };
-
-    const handleResize = () => {
-      if (isMobile()) {
-        // Force cleanup on mobile resize
-        document.body.classList.remove('modal-open', 'overflow-hidden');
-        document.body.style.overflow = '';
-        document.body.style.touchAction = 'auto';
-      }
-    };
-
-    // Force DOM reset on mobile
-    if (isMobile()) {
-      document.documentElement.style.transform = 'translateZ(0)';
-      document.body.style.webkitTransform = 'translateZ(0)';
-    }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('pagehide', handleBeforeUnload);
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('resize', handleResize);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('pagehide', handleBeforeUnload);
       document.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('resize', handleResize);
     };
   }, []);
 

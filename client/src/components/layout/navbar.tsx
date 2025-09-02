@@ -2,7 +2,6 @@
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useMobileNavigationCleanup } from "@/hooks/use-mobile-navigation";
 import { Button } from "@/components/ui/button";
 import type { SiteConfig } from "@shared/schema";
 
@@ -29,11 +28,11 @@ import { ShoppingCart, User, LogOut, Settings, Menu, X } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 
 export function Navbar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { safeNavigate, isNavigating, forceCleanup } = useMobileNavigationCleanup();
   const navRef = useRef(`navbar-${Date.now()}`);
+  const isNavigatingRef = useRef(false);
 
   const { data: config } = useQuery<SiteConfig>({
     queryKey: ["/api/config"],
@@ -57,28 +56,44 @@ export function Navbar() {
     { href: "/servicios", label: "Servicios", always: true }
   ].filter(item => item.always || (item.moduleKey && modules[item.moduleKey]?.activo));
 
-  // Mobile-safe navigation handler
+  // Enhanced navigation handler with proper cleanup
   const handleNavigation = useCallback((href: string, closeMenu = true) => {
-    if (isNavigating) return;
+    if (isNavigatingRef.current) return;
     
     try {
+      isNavigatingRef.current = true;
+      
       // Close mobile menu immediately
       if (closeMenu) {
         setIsMobileMenuOpen(false);
       }
       
-      // Force cleanup before navigation
-      forceCleanup();
+      // Clear any modal states before navigation
+      document.body.classList.remove('modal-open', 'overflow-hidden');
+      document.body.style.overflow = '';
       
-      // Use safe navigation
-      safeNavigate(href);
+      // Handle navigation
+      if (href === location) {
+        // If same route, force refresh by adding timestamp
+        const refreshHref = `${href}?refresh=${Date.now()}`;
+        window.history.replaceState(null, '', href); // Clean URL
+        setLocation(refreshHref);
+        setTimeout(() => setLocation(href), 50);
+      } else {
+        setLocation(href);
+      }
       
     } catch (error) {
       console.error('Navigation error:', error);
       // Fallback to direct navigation
       window.location.href = href;
+    } finally {
+      // Reset navigation flag after a delay
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 300);
     }
-  }, [isNavigating, safeNavigate, forceCleanup]);
+  }, [location, setLocation]);
 
   // Mobile menu cleanup on unmount
   useEffect(() => {
@@ -89,7 +104,7 @@ export function Navbar() {
     };
   }, []);
 
-  // Mobile-safe link component
+  // Enhanced link component with proper event handling
   const NavLink = useCallback(({ href, children, className, onClick }: {
     href: string;
     children: React.ReactNode;
@@ -104,11 +119,11 @@ export function Navbar() {
         if (onClick) onClick();
         handleNavigation(href);
       }}
-      disabled={isNavigating}
+      disabled={isNavigatingRef.current}
     >
       {children}
     </button>
-  ), [handleNavigation, isNavigating]);
+  ), [handleNavigation]);
 
   return (
     <nav 

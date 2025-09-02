@@ -1,5 +1,5 @@
-
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -53,6 +53,16 @@ export default function Contact() {
     retry: false,
   });
 
+  // Debug logging
+  React.useEffect(() => {
+    if (error) {
+      console.error("Contact Info Query Error:", error);
+    }
+    if (contactInfo) {
+      console.log("Contact Info Data:", contactInfo);
+    }
+  }, [error, contactInfo]);
+
   const sendMessageMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       return await apiRequest("/api/contact/messages", {
@@ -97,7 +107,7 @@ export default function Contact() {
       }}
     >
       <Navbar />
-
+      
       <AnimatedSection>
         <div className="container mx-auto px-4 py-16">
           {/* Header */}
@@ -146,7 +156,7 @@ export default function Contact() {
                     />
                   </div>
                 </div>
-
+                
                 <div>
                   <Label htmlFor="subject">Asunto</Label>
                   <Input
@@ -157,7 +167,7 @@ export default function Contact() {
                     placeholder="¿De qué quieres hablarnos?"
                   />
                 </div>
-
+                
                 <div>
                   <Label htmlFor="message">Mensaje *</Label>
                   <Textarea
@@ -354,6 +364,7 @@ export default function Contact() {
                   <CardTitle>Nuestra Ubicación</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {/* <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden"> */}
                     {contactInfo.mapsUrl ? (
                       <iframe
                         src={contactInfo.mapsUrl}
@@ -370,6 +381,7 @@ export default function Contact() {
                         <p className="text-sm mt-2">Mapa interactivo disponible próximamente</p>
                       </div>
                     )}
+                  {/* </div> */}
                 </CardContent>
               </Card>
             </AnimatedSection>
