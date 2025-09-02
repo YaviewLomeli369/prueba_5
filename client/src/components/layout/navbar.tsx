@@ -129,18 +129,18 @@ export function Navbar() {
     className?: string;
     onClick?: () => void;
   }) => (
-    <button
-      className={className}
+    <div
+      className={`cursor-pointer ${className}`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         if (onClick) onClick();
         handleNavigation(href);
       }}
-      disabled={isNavigatingRef.current}
+      style={isNavigatingRef.current ? { pointerEvents: 'none', opacity: 0.6 } : {}}
     >
       {children}
-    </button>
+    </div>
   ), [handleNavigation]);
 
   return (
@@ -200,13 +200,13 @@ export function Navbar() {
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground">
+                    <div className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground cursor-pointer">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
                           {user?.username?.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                    </button>
+                    </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <div className="flex items-center justify-start gap-2 p-2">
@@ -257,9 +257,9 @@ export function Navbar() {
             {/* Mobile Menu - Show when screen width <= 1075px */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <button className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 ${isDesktop ? 'hidden' : 'block'}`}>
+                <div className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 cursor-pointer ${isDesktop ? 'hidden' : 'block'}`}>
                   <Menu className="h-5 w-5" />
-                </button>
+                </div>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px] flex flex-col">
                 <SheetHeader className="flex-shrink-0">
@@ -311,16 +311,16 @@ export function Navbar() {
                             <span>Administración</span>
                           </NavLink>
                         ) : null}
-                        <button
+                        <div
                           onClick={() => {
                             logout();
                             setIsMobileMenuOpen(false);
                           }}
-                          className="flex items-center space-x-2 text-red-600 hover:text-red-700 p-2 rounded-md w-full text-left"
+                          className="flex items-center space-x-2 text-red-600 hover:text-red-700 p-2 rounded-md w-full text-left cursor-pointer"
                         >
                           <LogOut className="h-4 w-4" />
                           <span>Cerrar Sesión</span>
-                        </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-2">
