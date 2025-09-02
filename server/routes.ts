@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import express from "express";
 import {
   insertUserSchema,
   insertSiteConfigSchema,
@@ -72,6 +73,25 @@ function requireRole(roles: string[]) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add JSON parsing middleware with better error handling
+  app.use('/api', express.json({ 
+    limit: '10mb',
+    verify: (req: any, res: any, buf: Buffer, encoding: string) => {
+      try {
+        JSON.parse(buf.toString());
+      } catch (error) {
+        console.error('JSON Parse Error:', {
+          error: error.message,
+          body: buf.toString(),
+          contentType: req.get('Content-Type'),
+          url: req.url,
+          method: req.method
+        });
+        throw new Error('Invalid JSON format');
+      }
+    }
+  }));
+
   // Health check endpoint for Docker
   app.get("/api/health", (_req: Request, res: Response) => {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
@@ -1595,22 +1615,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/store/orders/:id/status", requireAuth, requireRole(['admin', 'superuser', 'staff']), async (req, res) => {
     try {
       const { id } = req.params;
+      
+      console.log('Received order status update request:', {
+        orderId: id,
+        headers: req.headers,
+        body: req.body,
+        bodyType: typeof req.body,
+        contentType: req.get('Content-Type')
+      });
+
+      // Validate request body exists and is an object
+      if (!req.body || typeof req.body !== 'object') {
+        console.error('Invalid request body:', req.body);
+        return res.status(400).json({ 
+          message: "Invalid request body. Expected JSON object.",
+          received: typeof req.body,
+          body: req.body
+        });
+      }
+
       const { status } = req.body;
       
+      // Validate status field exists
+      if (!status) {
+        console.error('Missing status field in request body:', req.body);
+        return res.status(400).json({ 
+          message: "Status field is required",
+          received: req.body
+        });
+      }
+
       // Validate status value
       const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
-      if (!status || !validStatuses.includes(status)) {
-        return res.status(400).json({ message: "Invalid order status" });
+      if (!validStatuses.includes(status)) {
+        console.error('Invalid status value:', status);
+        return res.status(400).json({ 
+          message: "Invalid order status",
+          validStatuses,
+          received: status
+        });
       }
       
+      console.log('Updating order status:', { orderId: id, status });
       const updatedOrder = await storage.updateOrderStatus(id, status);
+      
       if (!updatedOrder) {
+        console.error('Order not found:', id);
         return res.status(404).json({ message: "Order not found" });
       }
+      
+      console.log('Order status updated successfully:', updatedOrder);
       res.json(updatedOrder);
     } catch (error) {
-      console.error("Error updating order status:", error);
-      res.status(400).json({ message: error instanceof Error ? error.message : "Invalid data" });
+      console.error("Error updating order status:", {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        orderId: req.params.id,
+        body: req.body
+      });
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Internal server error" 
+      });
     }
   });
 

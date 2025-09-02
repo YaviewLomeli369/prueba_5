@@ -88,15 +88,19 @@ export default function AdminOrders() {
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: ({ orderId, status }: { orderId: string; status: string }) => 
-      apiRequest(`/api/store/orders/${orderId}/status`, {
+    mutationFn: ({ orderId, status }: { orderId: string; status: string }) => {
+      console.log('Updating order status - Frontend:', { orderId, status });
+      
+      return apiRequest(`/api/store/orders/${orderId}/status`, {
         method: "PUT",
-        body: JSON.stringify({ status }),
+        body: { status }, // Let apiRequest handle JSON.stringify
         headers: {
           'Content-Type': 'application/json'
         }
-      }),
-    onSuccess: () => {
+      });
+    },
+    onSuccess: (data) => {
+      console.log('Order status updated successfully:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/store/orders"] });
       toast({
         title: "Estado actualizado",
