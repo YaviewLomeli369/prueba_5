@@ -1,6 +1,7 @@
 import { Switch, Route } from "wouter";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import WhatsAppWidget from "@/components/WhatsAppWidget";
 import { useEffect, useRef } from "react";
 import { InlineEditor } from "@/components/inline-editor/InlineEditor";
@@ -8,7 +9,6 @@ import { useTheme } from "@/hooks/use-theme";
 import { ModuleRoute } from "@/components/module-route";
 import { LoadingPage } from "@/components/loading-page";
 import type { SiteConfig } from "@shared/schema";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Public pages
 import Home from "@/pages/home";
@@ -169,10 +169,10 @@ function Router() {
   }
 
   return (
-    <QueryClientProvider client={queryClient} key={`${appKeyRef.current}-query`}>
+    <>
       <NavigationFix />
       <div className="min-h-screen bg-background text-foreground">
-        <Switch key={`${appKeyRef.current}-switch`}>
+        <Switch>
           {/* Public routes with unique keys for proper re-rendering */}
           <Route path="/" component={() => <Home key={`home-${Date.now()}`} />} />
           <ModuleRoute path="/testimonials" component={() => <Testimonials key={`testimonials-${Date.now()}`} />} moduleKey="testimonios" />
@@ -219,24 +219,21 @@ function Router() {
           <Route component={() => <NotFound key={`not-found-${Date.now()}`} />} />
         </Switch>
       </div>
-    </QueryClientProvider>
+    </>
   );
 }
 
 function App() {
-  const appInstanceRef = useRef(`app-instance-${Date.now()}`);
-
   return (
-    <QueryClientProvider client={queryClient} key={`${appInstanceRef.current}-query`}>
-      <TooltipProvider key={`${appInstanceRef.current}-tooltip`}>
-        <Router key={`${appInstanceRef.current}-router`} />
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Router />
         <InlineEditor
           value=""
           onSave={async () => {}}
-          key={`${appInstanceRef.current}-editor`}
         />
-        <WhatsAppWidget key={`${appInstanceRef.current}-whatsapp`} />
-        <Toaster key={`${appInstanceRef.current}-toaster`} />
+        <WhatsAppWidget />
+        <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
   );
