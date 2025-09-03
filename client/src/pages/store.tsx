@@ -368,7 +368,7 @@ export default function Store() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <AnimatedSection>
-          <div className="container mx-auto px-4 py-16 flex flex-col items-center space-y-4">
+          <div className="container mx-auto px-4 py-16 flex flex-col items-center space-y-4 navbar-fixed-body">
             <Spinner size="lg" className="text-primary" />
             <div className="text-center">
               <h2 className="text-lg font-semibold text-foreground">Cargando tienda...</h2>
@@ -386,7 +386,7 @@ export default function Store() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <AnimatedSection>
-          <div className="container mx-auto px-4 py-16 text-center">
+          <div className="container mx-auto px-4 py-16 text-center navbar-fixed-body">
             <h1 className="text-4xl font-bold mb-4">Tienda</h1>
             <p className="text-xl text-muted-foreground">La tienda no está disponible en este momento.</p>
           </div>
@@ -398,7 +398,7 @@ export default function Store() {
 
   return (
     <div 
-      className="min-h-screen bg-background"
+      className="min-h-screen bg-background navbar-fixed-body"
       style={{
         backgroundColor: appearance.backgroundColor || "inherit",
         color: appearance.textColor || "inherit",

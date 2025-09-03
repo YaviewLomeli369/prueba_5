@@ -117,7 +117,7 @@ export default function BlogPost() {
       <div className="min-h-screen bg-background">
         <SEOHead title="Artículo no encontrado" />
         <Navbar />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 navbar-fixed-body">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Artículo no encontrado</h1>
             <p className="text-gray-600 mb-6">

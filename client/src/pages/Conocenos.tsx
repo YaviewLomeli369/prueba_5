@@ -36,7 +36,7 @@ function Conocenos() {
       {/* Hero principal */}
       <AnimatedSection>
         <section
-          className="relative py-24 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 text-white text-center shadow-lg"
+          className="relative py-24 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 text-white text-center shadow-lg navbar-fixed-body"
           style={{
             backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0")`,
             backgroundSize: "cover",

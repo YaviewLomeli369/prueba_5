@@ -85,7 +85,7 @@ const PlanCard = ({ plan }: { plan: typeof plans[0] }) => {
   return (
     <AnimatedSection delay={0.1}>
       <div
-        className={`relative rounded-2xl shadow-lg p-8 flex flex-col transition-transform duration-300 hover:scale-105 ${
+        className={`relative rounded-2xl shadow-lg p-8 flex flex-col transition-transform duration-300 hover:scale-105 navbar-fixed-body ${
           plan.highlight
             ? "bg-white border-2 border-blue-600 shadow-blue-200"
             : "bg-white border border-gray-200"

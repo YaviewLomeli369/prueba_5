@@ -98,7 +98,7 @@ export default function Testimonials() {
         {/* <div className="container mx-auto px-4 py-16" > */}
         {/* Header */}
           <section
-            className="relative w-full min-h-[40vh] md:min-h-[50vh] flex items-center justify-center text-white"
+            className="relative w-full min-h-[40vh] md:min-h-[50vh] flex items-center justify-center text-white navbar-fixed-body"
             style={{
               backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0")`,
               backgroundSize: "cover",

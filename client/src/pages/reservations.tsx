@@ -158,7 +158,7 @@ export default function Reservations() {
       {/* Hero Section */}
       <AnimatedSection>
         <section
-          className="relative bg-primary text-white py-16"
+          className="relative bg-primary text-white py-16 navbar-fixed-body"
           style={{
             backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0")`,
             backgroundSize: "cover",

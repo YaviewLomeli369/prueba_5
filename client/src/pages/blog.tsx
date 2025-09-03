@@ -65,7 +65,7 @@ export default function Blog() {
       {/* Hero Section */}
       <AnimatedSection>
         <section
-          className="relative py-20 text-white"
+          className="relative py-20 text-white navbar-fixed-body"
           style={{
             backgroundImage: `url("https://plus.unsplash.com/premium_photo-1677916317230-d9b78d675264?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")`,
             backgroundSize: "cover",
